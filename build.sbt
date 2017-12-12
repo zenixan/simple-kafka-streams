@@ -1,5 +1,5 @@
 name := "Simple Kafka Streams"
-organization := "org.eu.fuzzy"
+organization := "org.eu.fuzzy.kafka"
 description := "A Scala wrapper for the Kafka Streams API."
 version := "0.1.0"
 
