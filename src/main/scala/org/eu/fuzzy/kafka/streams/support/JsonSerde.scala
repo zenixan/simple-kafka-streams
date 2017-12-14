@@ -16,7 +16,7 @@ object JsonSerde {
    * @param mapper  an optional JSON mapper
    */
   def apply[T](classTag: ClassTag[T])(implicit mapper: ObjectMapper = null): Serde[T] = {
-    val objectMapper = if (mapper == null) newObjectMapper else mapper
+    val objectMapper = getObjectMapper(mapper)
     val objectSerde = new Serializer[T] with Deserializer[T] with Configurable {
         override def serialize(topic: String, data: T): Array[Byte] = objectMapper.writeValueAsBytes(data)
         override def deserialize(topic: String, data: Array[Byte]): T =
@@ -29,18 +29,23 @@ object JsonSerde {
   }
 
   /**
-   * Returns a new pre-configured object mapper.
+   * Returns a pre-configured object mapper.
    */
-  private def newObjectMapper: ObjectMapper = {
+  private def getObjectMapper(implicit defaultMapper: ObjectMapper = null): ObjectMapper = {
     try {
       Class.forName("com.fasterxml.jackson.module.scala.DefaultScalaModule")
     }
-    catch {
-      case _: ClassNotFoundException =>
-        throw new IllegalStateException("Unable to find a jackson-module-scala artifact in the project")
+    catch { case _: ClassNotFoundException =>
+      throw new IllegalStateException("Unable to find a jackson-module-scala artifact in the project")
     }
-    new ObjectMapper().findAndRegisterModules()
-      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    if (defaultMapper == null) {
+      new ObjectMapper()
+        .findAndRegisterModules()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    }
+    else {
+      defaultMapper.copy().findAndRegisterModules()
+    }
   }
 
 }

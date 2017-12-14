@@ -24,9 +24,18 @@ startYear := Some(2017)
 //
 // Project dependencies
 //
-libraryDependencies += "org.apache.kafka" % "kafka-streams" % "1.0.0"
+val kafkaVersion = "1.0.0"
+
+libraryDependencies += "org.apache.kafka" % "kafka-streams" % kafkaVersion
+libraryDependencies += "org.apache.kafka" % "kafka-streams" % kafkaVersion classifier "test"
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % kafkaVersion
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % kafkaVersion classifier "test"
+
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.1"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % Test
+libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % Test
 
 //
 // Build options
