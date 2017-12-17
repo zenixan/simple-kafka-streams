@@ -4,7 +4,7 @@ import scala.annotation.implicitNotFound
 import org.apache.kafka.common.serialization.{Deserializer, Serializer, Serde}
 
 /**
- * A wrapper for a serializer and deserializer of the given value type.
+ * A wrapper for the serializer and deserializer of the given value type.
  *
  * @tparam T  a type to be serialized/deserialized
  */

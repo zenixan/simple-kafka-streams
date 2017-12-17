@@ -4,7 +4,7 @@ import java.io.Closeable
 import java.util.Map
 
 /**
- * Represents a dummy configuration for the serializer and deserializer.
+ * Represents a configuration interface for the serializer and deserializer.
  */
 trait Configurable extends Closeable {
   /**

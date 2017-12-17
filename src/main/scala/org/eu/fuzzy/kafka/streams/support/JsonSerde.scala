@@ -2,11 +2,11 @@ package org.eu.fuzzy.kafka.streams.support
 
 import scala.reflect.ClassTag
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
+import org.apache.kafka.common.errors.SerializationException
 import org.apache.kafka.common.serialization.{Deserializer, Serde, Serializer}
 import org.eu.fuzzy.kafka.streams.serialization.Configurable
 
 object JsonSerde {
-
   /**
    * Provides serialization and deserialization in the JSON format.
    *
@@ -36,7 +36,7 @@ object JsonSerde {
       Class.forName("com.fasterxml.jackson.module.scala.DefaultScalaModule")
     }
     catch { case _: ClassNotFoundException =>
-      throw new IllegalStateException("Unable to find a jackson-module-scala artifact in the project")
+      throw new SerializationException("Unable to find a jackson-module-scala artifact in the project")
     }
     if (defaultMapper == null) {
       new ObjectMapper()
@@ -47,5 +47,4 @@ object JsonSerde {
       defaultMapper.copy().findAndRegisterModules()
     }
   }
-
 }

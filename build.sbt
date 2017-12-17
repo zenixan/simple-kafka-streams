@@ -31,6 +31,7 @@ libraryDependencies += "org.apache.kafka" % "kafka-streams" % kafkaVersion class
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % kafkaVersion
 libraryDependencies += "org.apache.kafka" % "kafka-clients" % kafkaVersion classifier "test"
 
+libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.1"
 
@@ -41,4 +42,4 @@ libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % Test
 // Build options
 //
 scalaVersion := "2.12.4"
-scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-Ywarn-dead-code")

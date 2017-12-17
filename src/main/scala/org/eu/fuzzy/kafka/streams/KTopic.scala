@@ -33,6 +33,8 @@ object KTopic {
    * @tparam V  a type of record value
    *
    * @param name  a name of topic
+   * @param keySerde  a serialization format for the record key
+   * @param valueSerde  a serialization format for the record value
    */
   def apply[K, V](name: String)(implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KTopic[K, V] = {
     require(keySerde != null, "keySerde cannot be null")
