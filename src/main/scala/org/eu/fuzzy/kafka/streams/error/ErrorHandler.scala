@@ -21,7 +21,7 @@ trait ErrorHandler {
                           (key: Any, value: Any): PartialFunction[Throwable, R]
 
   /**
-   * Returns an error handler for the invalid record.
+   * Returns an error handler for the invalid record value.
    *
    * @tparam R  a type of fallback value
    *

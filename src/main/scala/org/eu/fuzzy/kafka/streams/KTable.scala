@@ -15,8 +15,8 @@ import org.apache.kafka.streams.kstream.{KTable => KafkaTable}
  */
 trait KTable[K, V] {
 
-  /** Returns an underlying instance of Kafka Stream. */
-  private[streams] def internalStream: KafkaTable[K, V]
+  /** Returns an underlying instance of Kafka Table. */
+  private[streams] def internalTable: KafkaTable[K, V]
 
   /**
    * Returns a Kafka topic for this table.

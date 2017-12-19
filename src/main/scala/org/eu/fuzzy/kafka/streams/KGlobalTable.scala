@@ -1,5 +1,7 @@
 package org.eu.fuzzy.kafka.streams
 
+import org.apache.kafka.streams.kstream.GlobalKTable
+
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
  *
@@ -13,4 +15,9 @@ package org.eu.fuzzy.kafka.streams
  * @tparam K  a type of primary key
  * @tparam V  a type of value
  */
-trait KGlobalTable[K, V]
+trait KGlobalTable[K, V] {
+
+  /** Returns an underlying instance of Kafka Table. */
+  private[streams] def internalTable: GlobalKTable[K, V]
+
+}
