@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams
 
-import org.apache.kafka.streams.StreamsBuilder
 import org.scalatest.{FlatSpec, Matchers}
+import org.apache.kafka.streams.StreamsBuilder
 import org.eu.fuzzy.kafka.streams.support.KMockBuilder
 
 class KStreamSpec extends FlatSpec with Matchers {
@@ -18,7 +18,7 @@ class KStreamSpec extends FlatSpec with Matchers {
     records shouldEqual Seq((2, "Record 2"))
   }
 
-  "filter function" should "skip record if the error has occurred" in {
+  "filter function" should "remove the record from the stream if the error has occurred" in {
     val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
       .filter((_, _) => throw new NullPointerException).to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)

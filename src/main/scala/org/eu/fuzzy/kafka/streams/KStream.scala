@@ -25,58 +25,9 @@ import com.typesafe.scalalogging.Logger
  *
  * @see [[org.apache.kafka.streams.kstream.KStream]]
  */
-trait KStream[K, V] {
-
+trait KStream[K, V] extends StreamFunctions[K, V, KStream] with AggregateFunctions[K, V] {
   /** Returns an underlying instance of Kafka Stream. */
   private[streams] def internalStream: KafkaStream[K, V]
-
-  /**
-   * Returns a Kafka topic for this stream.
-   *
-   * @note The name of topic is absent for the streams which are created by any intermediate operations,
-   *       e.g. [[filter()]], [[map()]], etc.
-   */
-  def topic: KTopic[K, V]
-
-  /**
-   * Returns a new stream that consists of all records of this stream which satisfy the predicate.
-   *
-   * This is a stateless record-by-record operation.
-   *
-   * @param predicate  a function to test an each record
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#filter]]
-   */
-  def filter(predicate: (K, V) => Boolean): KStream[K, V]
-
-  /**
-   * Returns a new stream that consists of all records of this stream which don't satisfy the predicate.
-   *
-   * This is a stateless record-by-record operation.
-   *
-   * @param predicate  a function to test an each record
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#filterNot]]
-   */
-  @inline def filterNot(predicate: (K, V) => Boolean): KStream[K, V] = filter((key, value) => !predicate(key, value))
-
-  /**
-   * Returns a new stream that consists of all records of this stream which satisfy the predicate.
-   *
-   * This is a stateless record-by-record operation.
-   *
-   * @param predicate  a function to test an each record key
-   */
-  @inline def filterKeys(predicate: K => Boolean): KStream[K, V] = filter((key, _) => predicate(key))
-
-  /**
-   * Returns a new stream that consists of all records of this stream which satisfy the predicate.
-   *
-   * This is a stateless record-by-record operation.
-   *
-   * @param predicate  a function to test an each record value
-   */
-  @inline def filterValues(predicate: V => Boolean): KStream[K, V] = filter((_, value) => predicate(value))
 
   /**
    * Returns a new stream with a new key and value for each input record.
@@ -91,8 +42,9 @@ trait KStream[K, V] {
    * @param valueSerde  a serialization format for the output record value
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#map]]
+   * @see [[org.apache.kafka.streams.kstream.KTable#map]]
    */
-  @inline def map[KR, VR](mapper: (K, V) => (KR, VR))
+  def map[KR, VR](mapper: (K, V) => (KR, VR))
                  (implicit keySerde: KeySerde[KR], valueSerde: ValueSerde[VR]): KStream[KR, VR] =
     flatMap((key, value) => Seq(mapper(key, value)))
 
@@ -106,23 +58,8 @@ trait KStream[K, V] {
    * @param mapper  a function to compute a new value for each record
    * @param serde  a serialization format for the output record value
    */
-  @inline def mapKeys[KR](mapper: K => KR)(implicit serde: KeySerde[KR]): KStream[KR, V] =
+  def mapKeys[KR](mapper: K => KR)(implicit serde: KeySerde[KR]): KStream[KR, V] =
     map((key, value) => (mapper(key), value))(serde, topic.valueSerde)
-
-  /**
-   * Returns a new stream with a new value for each input record.
-   *
-   * This is a stateless record-by-record operation.
-   *
-   * @tparam VR  a new type of record value
-   *
-   * @param mapper  a function to compute a new value for each record
-   * @param serde  a serialization format for the output record value
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#mapValues]]
-   */
-  @inline def mapValues[VR](mapper: V => VR)(implicit serde: ValueSerde[VR]): KStream[K, VR] =
-    flatMapValues(mapper.andThen(Seq(_)))
 
   /**
    * Returns a new stream with a zero or more records for each input record.
@@ -529,43 +466,15 @@ trait KStream[K, V] {
   /**
    * Performs an action for each input record.
    *
-   * This is a stateless record-by-record operation.
-   *
-   * @param action  an action to perform on each record
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#foreach]]
-   */
-  def foreach(action: (K, V) => Unit): Unit
-
-  /**
-   * Performs an action for each input record.
-   *
    * This is a stateless record-by-record operation that triggers a side effect (such as logging or statistics collection)
    * and returns an unchanged stream.
    *
    * @param action  an action to perform on each record
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#peek]]
+   * @see [[org.apache.kafka.streams.kstream.KTable#peek]]
    */
   def peek(action: (K, V) => Unit): KStream[K, V]
-
-  /**
-   * Materializes this stream to a topic.
-   *
-   * @param topic  a name of topic to write
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#to]]
-   */
-  def to(topic: String): Unit
-
-  /**
-   * Materializes this stream to a topic and creates a new stream from the topic.
-   *
-   * @param topic  a name of topic to write
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#through]]
-   */
-  def through(topic: String): KStream[K, V]
 }
 
 object KStream {
@@ -586,9 +495,9 @@ object KStream {
     val stream: KafkaStream[K, V] = builder.stream(topic.name, Consumed.`with`(topic.keySerde, Serdes.ByteArray))
       .filter { (key, value) =>
         Try(deserializer.deserialize(topic.name, value)).map(_ => true)
-          .recover(errorHandler.handle(topic, DeserializeOperation)(key, value)).get
+          .recover(errorHandler.handle(topic, DeserializeOperation, key, value)).get
       }
       .flatMapValues(value => Collections.singletonList(deserializer.deserialize(topic.name, value)))
-    new KStreamWrapper(topic, stream, errorHandler)
+    new KStreamWrapper(topic, stream, builder, errorHandler)
   }
 }

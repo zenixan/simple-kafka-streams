@@ -1,6 +1,9 @@
 package org.eu.fuzzy.kafka.streams
 
-import org.apache.kafka.streams.kstream.GlobalKTable
+import org.apache.kafka.common.utils.Bytes
+import org.apache.kafka.streams.StreamsBuilder
+import org.apache.kafka.streams.kstream.{GlobalKTable, Materialized}
+import org.apache.kafka.streams.state.KeyValueStore
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
@@ -16,8 +19,43 @@ import org.apache.kafka.streams.kstream.GlobalKTable
  * @tparam V  a type of value
  */
 trait KGlobalTable[K, V] {
-
   /** Returns an underlying instance of Kafka Table. */
   private[streams] def internalTable: GlobalKTable[K, V]
+}
 
+object KGlobalTable {
+  /** Represents a type of the local state store. */
+  type StateStore = KeyValueStore[Bytes, Array[Byte]]
+
+  /**
+   * Creates a table for the given topic.
+   *
+   * @tparam K  a type of record key
+   * @tparam V  a type of record value
+   *
+   * @param builder  a builder of Kafka Streams topology
+   * @param topic  an identity of Kafka topic
+   */
+  def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V]): KGlobalTable[K, V] =
+    apply(builder, topic, Materialized.`with`[K, V, StateStore](topic.keySerde, topic.valueSerde))
+
+  /**
+   * Creates a table for the given topic.
+   *
+   * @tparam K  a type of record key
+   * @tparam V  a type of record value
+   *
+   * @param builder  a builder of Kafka Streams topology
+   * @param topic  an identity of Kafka topic
+   * @param options  a set of options to use when materializing to the local state store
+   */
+  def apply[K, V](
+                   builder: StreamsBuilder,
+                   topic: KTopic[K, V],
+                   options: Materialized[K, V, StateStore]): KGlobalTable[K, V] = {
+    val table = builder.globalTable(topic.name, options)
+    new KGlobalTable[K, V] {
+      override private[streams] def internalTable = table
+    }
+  }
 }
