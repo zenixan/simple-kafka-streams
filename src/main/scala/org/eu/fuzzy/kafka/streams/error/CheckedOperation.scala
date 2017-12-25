@@ -11,19 +11,20 @@ object CheckedOperation {
   case object DeserializeOperation extends CheckedOperation("deserialize")
 
   case object FilterOperation extends CheckedOperation("filter")
+  case object MapOperation extends CheckedOperation("map")
+  case object MapValuesOperation extends CheckedOperation("mapValues")
   case object FlatMapOperation extends CheckedOperation("flatMap")
   case object FlatMapValuesOperation extends CheckedOperation("flatMapValues")
-  case object MapValuesOperation extends CheckedOperation("mapValues")
   case object BranchOperation extends CheckedOperation("branch")
   case object ForeachOperation extends CheckedOperation("foreach")
   case object PeekOperation extends CheckedOperation("peek")
 
-  case object InitializerOperation extends CheckedOperation("aggregateByKey")
-  case object AggregateOperation extends CheckedOperation("aggregateByKey")
-  case object ReduceOperation extends CheckedOperation("reduceByKey")
+  case object InitializerOperation extends CheckedOperation("aggregate")
+  case object AggregateOperation extends CheckedOperation("aggregate")
+  case object ReduceOperation extends CheckedOperation("reduce")
 
   case object LeftJoinOperation extends CheckedOperation("leftJoin")
   case object OuterJoinOperation extends CheckedOperation("outerJoin")
-  case object InnerJoinOperation extends CheckedOperation("join")
-  case object JoinByKeyOperation extends CheckedOperation("join")
+  case object InnerJoinOperation extends CheckedOperation("innerJoin")
+  case object JoinByKeyOperation extends CheckedOperation("*Join")
 }

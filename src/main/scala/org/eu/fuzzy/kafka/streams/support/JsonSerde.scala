@@ -31,7 +31,7 @@ object JsonSerde {
   /**
    * Returns a pre-configured object mapper.
    */
-  private def getObjectMapper(implicit defaultMapper: ObjectMapper = null): ObjectMapper = {
+  private def getObjectMapper(defaultMapper: ObjectMapper = null): ObjectMapper = {
     try {
       Class.forName("com.fasterxml.jackson.module.scala.DefaultScalaModule")
     }

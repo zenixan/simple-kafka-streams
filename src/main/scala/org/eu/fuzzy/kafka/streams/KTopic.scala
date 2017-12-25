@@ -36,11 +36,24 @@ object KTopic {
    * @param keySerde  a serialization format for the record key
    * @param valueSerde  a serialization format for the record value
    */
-  def apply[K, V](name: String)(implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KTopic[K, V] = {
+  def apply[K, V](name: String)(implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KNamedTopic[K, V] = {
+    require(name != null && name.nonEmpty, "name cannot be null")
     require(keySerde != null, "keySerde cannot be null")
     require(valueSerde != null, "valueSerde cannot be null")
-    if (name == null || name.isEmpty) KAnonymousTopic(keySerde, valueSerde) else KNamedTopic(name, keySerde, valueSerde)
+    KNamedTopic(name, keySerde, valueSerde)
   }
+
+  /**
+   * Creates an anonymous identity of Kafka topic.
+   *
+   * @tparam K  a type of record key
+   * @tparam V  a type of record value
+   *
+   * @param keySerde  a serialization format for the record key
+   * @param valueSerde  a serialization format for the record value
+   */
+  def apply[K, V](implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] =
+    KAnonymousTopic(keySerde, valueSerde)
 }
 
 /**

@@ -1,9 +1,8 @@
 package org.eu.fuzzy.kafka.streams
 
-import org.apache.kafka.common.utils.Bytes
 import org.apache.kafka.streams.StreamsBuilder
-import org.apache.kafka.streams.kstream.{GlobalKTable, Materialized}
-import org.apache.kafka.streams.state.KeyValueStore
+import org.apache.kafka.streams.kstream.GlobalKTable
+import org.eu.fuzzy.kafka.streams.internals.storeOptions
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
@@ -24,35 +23,29 @@ trait KGlobalTable[K, V] {
 }
 
 object KGlobalTable {
-  /** Represents a type of the local state store. */
-  type StateStore = KeyValueStore[Bytes, Array[Byte]]
-
   /**
-   * Creates a table for the given topic.
+   * Creates a global table for the given topic.
    *
-   * @tparam K  a type of record key
+   * @tparam K  a type of primary key
    * @tparam V  a type of record value
    *
    * @param builder  a builder of Kafka Streams topology
    * @param topic  an identity of Kafka topic
    */
   def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V]): KGlobalTable[K, V] =
-    apply(builder, topic, Materialized.`with`[K, V, StateStore](topic.keySerde, topic.valueSerde))
+    apply(builder, topic, storeOptions(topic.keySerde, topic.valueSerde))
 
   /**
-   * Creates a table for the given topic.
+   * Creates a global table for the given topic.
    *
-   * @tparam K  a type of record key
+   * @tparam K  a type of primary key
    * @tparam V  a type of record value
    *
    * @param builder  a builder of Kafka Streams topology
    * @param topic  an identity of Kafka topic
    * @param options  a set of options to use when materializing to the local state store
    */
-  def apply[K, V](
-                   builder: StreamsBuilder,
-                   topic: KTopic[K, V],
-                   options: Materialized[K, V, StateStore]): KGlobalTable[K, V] = {
+  def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V], options: KTable.Options[K, V]): KGlobalTable[K, V] = {
     val table = builder.globalTable(topic.name, options)
     new KGlobalTable[K, V] {
       override private[streams] def internalTable = table
