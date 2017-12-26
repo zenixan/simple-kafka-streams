@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams
 
 import scala.util.Try
-import java.util.Collections
+import java.util.Collections.singletonList
 
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.{Consumed, StreamsBuilder}
@@ -24,13 +24,14 @@ import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
  *
  * @see [[org.apache.kafka.streams.kstream.KStream]]
  */
-trait KStream[K, V] extends KStream.Wrapper[K, V]
-  with FilterFunctions[K, V, KStream]
-  with kstream.MaterializeFunctions[K, V]
-  with kstream.TransformFunctions[K, V]
-  with kstream.IterativeFunctions[K, V]
-  with kstream.JoinFunctions[K, V]
-  with kstream.AggregateFunctions[K, V]
+trait KStream[K, V]
+    extends KStream.Wrapper[K, V]
+    with FilterFunctions[K, V, KStream]
+    with kstream.MaterializeFunctions[K, V]
+    with kstream.TransformFunctions[K, V]
+    with kstream.IterativeFunctions[K, V]
+    with kstream.JoinFunctions[K, V]
+    with kstream.AggregateFunctions[K, V]
 
 /**
  * Represents an abstraction of a record stream.
@@ -41,6 +42,7 @@ trait KStream[K, V] extends KStream.Wrapper[K, V]
  * @see [[org.apache.kafka.streams.kstream.KStream]]
  */
 object KStream {
+
   /**
    * Creates a stream for the given topic.
    *
@@ -65,18 +67,19 @@ object KStream {
    * @param topic  an identity of Kafka topic
    * @param handler  a handler of stream errors
    */
-  def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V], handler: ErrorHandler): KStream[K, V] = {
-    require(builder != null, "streams builder cannot be null")
-    require(topic != null, "topic cannot be null")
-    require(handler != null, "error handler cannot be null")
-
+  def apply[K, V](builder: StreamsBuilder,
+                  topic: KTopic[K, V],
+                  handler: ErrorHandler): KStream[K, V] = {
     val deserializer = topic.valueSerde.deserializer
-    val stream: KafkaStream[K, V] = builder.stream(topic.name, Consumed.`with`(topic.keySerde, Serdes.ByteArray))
+    val stream: KafkaStream[K, V] = builder
+      .stream(topic.name, Consumed.`with`(topic.keySerde, Serdes.ByteArray))
       .filter { (key, value) =>
-        Try(deserializer.deserialize(topic.name, value)).map(_ => true)
-          .recover(handler.handle(topic, DeserializeOperation, key, value)).get
+        Try(deserializer.deserialize(topic.name, value))
+          .map(_ => true)
+          .recover(handler.handle(topic, DeserializeOperation, key, value))
+          .get
       }
-      .flatMapValues(value => Collections.singletonList(deserializer.deserialize(topic.name, value)))
+      .flatMapValues(value => singletonList(deserializer.deserialize(topic.name, value)))
     StreamWrapper(topic, stream, builder, handler)
   }
 
@@ -87,6 +90,7 @@ object KStream {
    * @tparam V  a type of record value
    */
   trait Wrapper[K, V] {
+
     /**
      * Returns a Kafka topic for this stream.
      *

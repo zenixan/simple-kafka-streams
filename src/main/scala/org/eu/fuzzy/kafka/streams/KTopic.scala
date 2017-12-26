@@ -9,6 +9,7 @@ import serialization.{KeySerde, ValueSerde}
  * @tparam V  a type of record value
  */
 sealed trait KTopic[K, V] {
+
   /** Returns a name of topic. */
   def name: String
 
@@ -26,6 +27,7 @@ sealed trait KTopic[K, V] {
 }
 
 object KTopic {
+
   /**
    * Creates an identity of Kafka topic.
    *
@@ -36,10 +38,9 @@ object KTopic {
    * @param keySerde  a serialization format for the record key
    * @param valueSerde  a serialization format for the record value
    */
-  def apply[K, V](name: String)(implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KNamedTopic[K, V] = {
-    require(name != null && name.nonEmpty, "name cannot be null")
-    require(keySerde != null, "keySerde cannot be null")
-    require(valueSerde != null, "valueSerde cannot be null")
+  def apply[K, V](name: String)(implicit keySerde: KeySerde[K],
+                                valueSerde: ValueSerde[V]): KNamedTopic[K, V] = {
+    require(name.nonEmpty, "name cannot be empty")
     KNamedTopic(name, keySerde, valueSerde)
   }
 
@@ -52,7 +53,9 @@ object KTopic {
    * @param keySerde  a serialization format for the record key
    * @param valueSerde  a serialization format for the record value
    */
-  def apply[K, V](implicit keySerde: KeySerde[K], valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] =
+  def apply[K, V](implicit
+                  keySerde: KeySerde[K],
+                  valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] =
     KAnonymousTopic(keySerde, valueSerde)
 }
 
@@ -65,8 +68,10 @@ object KTopic {
  * @param keySerde  a serialization format for the record key
  * @param valueSerde  a serialization format for the record value
  */
-final case class KAnonymousTopic[K, V] private (keySerde: KeySerde[K], valueSerde: ValueSerde[V]) extends KTopic[K, V] {
-  override def name: String = throw new UnsupportedOperationException("Anonymous topic doesn't have a public name")
+final case class KAnonymousTopic[K, V] private (keySerde: KeySerde[K], valueSerde: ValueSerde[V])
+    extends KTopic[K, V] {
+  override def name: String =
+    throw new UnsupportedOperationException("Anonymous topic doesn't have a public name")
   override def isAnonymous: Boolean = true
 }
 
@@ -80,6 +85,9 @@ final case class KAnonymousTopic[K, V] private (keySerde: KeySerde[K], valueSerd
  * @param keySerde  a serialization format for the record key
  * @param valueSerde  a serialization format for the record value
  */
-final case class KNamedTopic[K, V] private (name: String, keySerde: KeySerde[K], valueSerde: ValueSerde[V]) extends KTopic[K, V] {
+final case class KNamedTopic[K, V] private (name: String,
+                                            keySerde: KeySerde[K],
+                                            valueSerde: ValueSerde[V])
+    extends KTopic[K, V] {
   override def isAnonymous: Boolean = false
 }

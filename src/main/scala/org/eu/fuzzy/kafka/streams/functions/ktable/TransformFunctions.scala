@@ -3,7 +3,9 @@ package org.eu.fuzzy.kafka.streams.functions.ktable
 import org.eu.fuzzy.kafka.streams.KTable
 import org.eu.fuzzy.kafka.streams.KTable.Options
 
-trait TransformFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.TransformFunctions[K, V, KTable] {
+trait TransformFunctions[K, V]
+    extends org.eu.fuzzy.kafka.streams.functions.TransformFunctions[K, V, KTable] {
+
   /**
    * Returns a new stream with a new key for each input record.
    *

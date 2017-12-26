@@ -18,11 +18,13 @@ import org.eu.fuzzy.kafka.streams.internals.storeOptions
  * @tparam V  a type of value
  */
 trait KGlobalTable[K, V] {
+
   /** Returns an underlying instance of Kafka Table. */
   private[streams] def internalTable: GlobalKTable[K, V]
 }
 
 object KGlobalTable {
+
   /**
    * Creates a global table for the given topic.
    *
@@ -45,7 +47,9 @@ object KGlobalTable {
    * @param topic  an identity of Kafka topic
    * @param options  a set of options to use when materializing to the local state store
    */
-  def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V], options: KTable.Options[K, V]): KGlobalTable[K, V] = {
+  def apply[K, V](builder: StreamsBuilder,
+                  topic: KTopic[K, V],
+                  options: KTable.Options[K, V]): KGlobalTable[K, V] = {
     val table = builder.globalTable(topic.name, options)
     new KGlobalTable[K, V] {
       override private[streams] def internalTable = table

@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams.functions.kstream
 
 import org.apache.kafka.streams.kstream.JoinWindows
-import org.eu.fuzzy.kafka.streams.{KGlobalTable, KStream, KTable}
+import org.eu.fuzzy.kafka.streams.{KGlobalTable, KTable, KStream}
 import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
 
 /**
@@ -11,12 +11,15 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  * @tparam V  a type of record value
  */
 trait JoinFunctions[K, V] {
+
   /**
-   * Returns a new stream by joining records of this stream with records from the global table using non-windowed inner join.
+   * Returns a new stream by joining records of this stream with records from the global table using
+   * non-windowed inner join.
    *
    * The key-based join is done according to following conditions:
    *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and do not trigger the join.
+   *  - Input records for the stream with a `null` key or a `null` value are ignored and
+   *    do not trigger the join.
    *
    * <table border='1'>
    *  <caption>Example</caption>
@@ -57,15 +60,21 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
    */
-  def innerJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV], mapper: (K, V) => GK, joiner: (V, GV) => VR)
+  // format: off
+  def innerJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV],
+                            mapper: (K, V) => GK,
+                            joiner: (V, GV) => VR)
                            (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the table using non-windowed inner join.
+   * Returns a new stream by joining records of this stream with records from the table using
+   * non-windowed inner join.
    *
    * The key-based join is done according to following conditions:
    *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and do not trigger the join.
+   *  - Input records for the stream with a `null` key or a `null` value are ignored and
+   *    do not trigger the join.
    *
    * <table border='1'>
    *  <caption>Example</caption>
@@ -102,14 +111,19 @@ trait JoinFunctions[K, V] {
    * @param joiner  a function to compute the join result for a pair of matching records
    * @param serde  a serialization format for the output record value
    */
-  def innerJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)(implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: off
+  def innerJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
+                       (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the given stream using windowed inner join.
+   * Returns a new stream by joining records of this stream with records from the given stream using
+   * windowed inner join.
    *
    * The key-based join is done according to following conditions:
    *  - Input records with a null key or a null value are ignored and do not trigger the join.
-   *  - Two input records are joined if their timestamps are 'close' to each other as defined by the time window.
+   *  - Two input records are joined if their timestamps are '''close''' to each other as defined
+   *    by the time window.
    *
    * <table border='1'>
    *  <caption>Example (assuming all input records belong to the correct windows)</caption>
@@ -145,17 +159,21 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
    */
+  // format: off
   def innerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
                        (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the global table using non-windowed left join.
+   * Returns a new stream by joining records of this stream with records from the global table using
+   * non-windowed left join.
    *
    * The key-based join is done according to following conditions:
    *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and do not trigger the join.
-   *  - For each input record on the left side that does not have any match on the right side, the `joiner` function
-   *    will be called with a `null` value.
+   *  - Input records for the stream with a `null` key or a `null` value are ignored and
+   *    do not trigger the join.
+   *  - For each input record on the left side that does not have any match on the right side,
+   *    the `joiner` function will be called with a `null` value.
    *
    * <table border='1'>
    *  <caption>Example</caption>
@@ -196,17 +214,23 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#leftJoin]]
    */
-  def leftJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV], mapper: (K, V) => GK, joiner: (V, GV) => VR)
+  // format: off
+  def leftJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV],
+                           mapper: (K, V) => GK,
+                           joiner: (V, GV) => VR)
                           (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the table using non-windowed left join.
+   * Returns a new stream by joining records of this stream with records from the table using
+   * non-windowed left join.
    *
    * The key-based join is done according to following conditions:
    *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and do not trigger the join.
-   *  - For each input record on the left side that does not have any match on the right side, the `joiner` function
-   *    will be called with a `null` value.
+   *  - Input records for the stream with a `null` key or a `null` value are ignored and
+   *    do not trigger the join.
+   *  - For each input record on the left side that does not have any match on the right side,
+   *    the `joiner` function will be called with a `null` value.
    *
    * <table border='1'>
    *  <caption>Example</caption>
@@ -245,16 +269,21 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#leftJoin]]
    */
-  def leftJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)(implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: off
+  def leftJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
+                      (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the given stream using windowed left join.
+   * Returns a new stream by joining records of this stream with records from the given stream using
+   * windowed left join.
    *
    * The key-based join is done according to following conditions:
    *  - Input records with a null key or a null value are ignored and do not trigger the join.
-   *  - Two input records are joined if their timestamps are 'close' to each other as defined by the time window.
-   *  - For each input record on the left side that does not have any match on the right side, the `joiner` function
-   *    will be called with a `null` value.
+   *  - Two input records are joined if their timestamps are '''close''' to each other as defined
+   *    by the time window.
+   *  - For each input record on the left side that does not have any match on the right side,
+   *    the `joiner` function will be called with a `null` value.
    *
    * <table border='1'>
    *  <caption>Example (assuming all input records belong to the correct windows)</caption>
@@ -290,15 +319,19 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
    */
+  // format: off
   def lefJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
                      (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 
   /**
-   * Returns a new stream by joining records of this stream with records from the given stream using windowed outer join.
+   * Returns a new stream by joining records of this stream with records from the given stream using
+   * windowed outer join.
    *
    * The key-based join is done according to following conditions:
    *  - Input records with a null key or a null value are ignored and do not trigger the join.
-   *  - Two input records are joined if their timestamps are 'close' to each other as defined by the time window.
+   *  - Two input records are joined if their timestamps are '''close''' to each other as defined
+   *    by the time window.
    *  - For each input record on one side that does not have any match on the other side,
    *    the `joiner` function will be called with a `null` value.
    *
@@ -334,6 +367,8 @@ trait JoinFunctions[K, V] {
    * @param windows  a time window
    * @param serde  a serialization format for the output record value
    */
+  // format: off
   def outerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
                        (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  // format: on
 }

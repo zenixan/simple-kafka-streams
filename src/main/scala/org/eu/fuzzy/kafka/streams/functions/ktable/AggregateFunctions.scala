@@ -43,7 +43,9 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  *    Note that, whenever the subtractor returns a `null` value itself, then the corresponding key is removed from
  *    the resulting table. If that happens, any next input record for that key will re-initialize its aggregate value.
  */
-trait AggregateFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, V] {
+trait AggregateFunctions[K, V]
+    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, V] {
+
   /**
    * $aggregateDesc
    *
@@ -56,8 +58,10 @@ trait AggregateFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.Aggr
    *
    * @see [[org.apache.kafka.streams.kstream.KGroupedTable#aggregate]]
    */
+  // format: off
   def aggregate[VR](initializer: () => VR, adder: (K, V, VR) => VR, subtractor: (K, V, VR) => VR)
                    (implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: on
 
   /**
    * $aggregateDesc
@@ -71,8 +75,10 @@ trait AggregateFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.Aggr
    *
    * @see [[org.apache.kafka.streams.kstream.KGroupedTable#aggregate]]
    */
-  def aggregate[VR](
-    initializer: () => VR, adder: (K, V, VR) => VR, subtractor: (K, V, VR) => VR, options: Options[K, VR]): KTable[K, VR]
+  def aggregate[VR](initializer: () => VR,
+                    adder: (K, V, VR) => VR,
+                    subtractor: (K, V, VR) => VR,
+                    options: Options[K, VR]): KTable[K, VR]
 
   /**
    * $reduceDesc

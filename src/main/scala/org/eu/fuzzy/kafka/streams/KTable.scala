@@ -4,8 +4,9 @@ import org.apache.kafka.common.utils.Bytes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.kstream.{Materialized, KTable => KafkaTable}
 import org.apache.kafka.streams.state.KeyValueStore
+import org.apache.kafka.streams.state.WindowStore
 
-import org.eu.fuzzy.kafka.streams.functions.{IterativeFunctions, MaterializeFunctions, ktable}
+import org.eu.fuzzy.kafka.streams.functions.{ktable, IterativeFunctions, MaterializeFunctions}
 import org.eu.fuzzy.kafka.streams.functions.ktable.AggregateFunctions
 import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
 import org.eu.fuzzy.kafka.streams.internals.storeOptions
@@ -23,12 +24,13 @@ import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
  *
  * @see [[org.apache.kafka.streams.kstream.KTable]]
  */
-trait KTable[K, V] extends KTable.Wrapper[K, V]
-  with ktable.FilterFunctions[K, V]
-  with MaterializeFunctions[K, V]
-  with ktable.TransformFunctions[K, V]
-  with IterativeFunctions[K, V]
-  with ktable.JoinFunctions[K, V]
+trait KTable[K, V]
+    extends KTable.Wrapper[K, V]
+    with ktable.FilterFunctions[K, V]
+    with MaterializeFunctions[K, V]
+    with ktable.TransformFunctions[K, V]
+    with IterativeFunctions[K, V]
+    with ktable.JoinFunctions[K, V]
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
@@ -39,6 +41,7 @@ trait KTable[K, V] extends KTable.Wrapper[K, V]
  * @see [[org.apache.kafka.streams.kstream.KTable]]
  */
 object KTable {
+
   /**
    * Represents a set of options for table materializing to the local state store.
    *
@@ -46,6 +49,14 @@ object KTable {
    * @tparam V  a type of record value
    */
   type Options[K, V] = Materialized[K, V, KeyValueStore[Bytes, Array[Byte]]]
+
+  /**
+   * Represents a set of window options for table materializing to the local state store.
+   *
+   * @tparam K  a type of primary key
+   * @tparam V  a type of record value
+   */
+  type WindowOptions[K, V] = Materialized[K, V, WindowStore[Bytes, Array[Byte]]]
 
   /**
    * Creates a table for the given topic.
@@ -71,7 +82,9 @@ object KTable {
    * @param topic  an identity of Kafka topic
    * @param handler  a handler of stream errors
    */
-  def apply[K, V](builder: StreamsBuilder, topic: KTopic[K, V], handler: ErrorHandler): KTable[K, V] =
+  def apply[K, V](builder: StreamsBuilder,
+                  topic: KTopic[K, V],
+                  handler: ErrorHandler): KTable[K, V] =
     apply(builder, topic, storeOptions(topic.keySerde, topic.valueSerde), handler)
 
   /**
@@ -85,13 +98,10 @@ object KTable {
    * @param options  a set of options to use when materializing to the local state store
    * @param handler  a handler of stream errors
    */
-  def apply[K, V](
-      builder: StreamsBuilder, topic: KTopic[K, V], options: Options[K, V], handler: ErrorHandler): KTable[K, V] = {
-    require(builder != null, "streams builder cannot be null")
-    require(topic != null, "topic cannot be null")
-    require(options != null, "options cannot be null")
-    require(handler != null, "error handler cannot be null")
-
+  def apply[K, V](builder: StreamsBuilder,
+                  topic: KTopic[K, V],
+                  options: Options[K, V],
+                  handler: ErrorHandler): KTable[K, V] = {
     val materialized = options.withKeySerde(topic.keySerde).withValueSerde(topic.valueSerde)
     KStream(builder, topic, handler).reduce((_, newValue) => newValue, materialized)
   }
@@ -103,6 +113,7 @@ object KTable {
    * @tparam V  a type of value
    */
   trait Wrapper[K, V] {
+
     /**
      * Returns a Kafka topic for this stream.
      *
@@ -135,8 +146,11 @@ object KTable {
      *
      * @see [[org.apache.kafka.streams.kstream.KTable#groupBy]]
      */
+    // format: off
     def groupBy[KR, VR](mapper: (K, V) => (KR, VR))
-                       (implicit keySerde: KeySerde[KR], valueSerde: ValueSerde[VR]): AggregateFunctions[KR, VR]
+                       (implicit keySerde: KeySerde[KR],
+                        valueSerde: ValueSerde[VR]): AggregateFunctions[KR, VR]
+    // format: on
 
     /** Returns an underlying instance of Kafka Table. */
     private[streams] def internalTable: KafkaTable[K, V]

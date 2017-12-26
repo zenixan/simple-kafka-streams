@@ -12,23 +12,32 @@ import org.eu.fuzzy.kafka.streams.KTopic
  * Provides an unit-test processing topologies of Kafka Streams applications.
  */
 object KMockBuilder {
+
+  /**
+   * Initializes a test topology driver with default stream configuration.
+   *
+   * @param topology  a function to create a stream topology
+   */
+  def apply(topology: StreamsBuilder => Unit): Builder = apply(topology, Map())
+
   /**
    * Initializes a test topology driver.
    *
    * @param topology  a function to create a stream topology
    * @param config  a stream configuration for the topology
    */
-  def apply(topology: StreamsBuilder => Any, config: Map[String, _] = Map()): Builder = {
+  def apply(topology: StreamsBuilder => Unit, config: Map[String, _]): Builder = {
     val streamConfig = Map(
       StreamsConfig.APPLICATION_ID_CONFIG -> s"stream-mock-${UUID.randomUUID()}",
-      StreamsConfig.BOOTSTRAP_SERVERS_CONFIG -> "localhost:9092"
-    ) ++ config
+      StreamsConfig.BOOTSTRAP_SERVERS_CONFIG -> "localhost:9092") ++ config
     val builder = new StreamsBuilder()
     topology(builder)
-    Builder(new ProcessorTopologyTestDriver(new StreamsConfig(streamConfig.asJava), builder.build()))
+    Builder(
+      new ProcessorTopologyTestDriver(new StreamsConfig(streamConfig.asJava), builder.build()))
   }
 
-  case class Builder(driver: ProcessorTopologyTestDriver) {
+  final case class Builder(driver: ProcessorTopologyTestDriver) {
+
     /**
      * Sends an input message to the specified topic.
      *
@@ -39,7 +48,11 @@ object KMockBuilder {
      * @param record  a message to send
      */
     @inline def input[K, V](topic: KTopic[K, V], record: (K, V)): Builder = {
-      driver.process(topic.name, record._1, record._2, topic.keySerde.serializer, topic.valueSerde.serializer)
+      driver.process(topic.name,
+                     record._1,
+                     record._2,
+                     topic.keySerde.serializer,
+                     topic.valueSerde.serializer)
       this
     }
 
@@ -68,7 +81,8 @@ object KMockBuilder {
     def output[K, V](topic: KTopic[K, V]): Seq[(K, V)] = {
       @tailrec
       def read(records: Seq[(K, V)]): Seq[(K, V)] = {
-        val record = driver.readOutput(topic.name, topic.keySerde.deserializer, topic.valueSerde.deserializer)
+        val record =
+          driver.readOutput(topic.name, topic.keySerde.deserializer, topic.valueSerde.deserializer)
         if (record == null) records else read(records :+ (record.key(), record.value()))
       }
       read(Nil)

@@ -12,6 +12,7 @@ import scala.language.higherKinds
  * @tparam S  a type of stream, i.e. [[org.eu.fuzzy.kafka.streams.KStream]] or [[org.eu.fuzzy.kafka.streams.KTable]]
  */
 trait FilterFunctions[K, V, S[K, V]] {
+
   /**
    * Returns a new stream that consists of all records of this stream which satisfy the predicate.
    *
@@ -40,7 +41,8 @@ trait FilterFunctions[K, V, S[K, V]] {
    * @see [[org.apache.kafka.streams.kstream.KStream#filterNot]]
    * @see [[org.apache.kafka.streams.kstream.KTable#filterNot]]
    */
-  def filterNot(predicate: (K, V) => Boolean): S[K, V] = filter((key, value) => !predicate(key, value))
+  def filterNot(predicate: (K, V) => Boolean): S[K, V] =
+    filter((key, value) => !predicate(key, value))
 
   /**
    * Returns a new stream that consists of all records of this stream which satisfy the predicate.

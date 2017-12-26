@@ -22,12 +22,11 @@ import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
  * @param builder  a builder of Kafka Streams topology
  * @param errorHandler  a handler of stream errors
  */
-private[streams] case class StreamWrapper[K, V](
-    topic: KTopic[K, V],
-    internalStream: KafkaStream[K, V],
-    builder: StreamsBuilder,
-    errorHandler: ErrorHandler)
-  extends KStream[K, V] {
+private[streams] final case class StreamWrapper[K, V](topic: KTopic[K, V],
+                                                      internalStream: KafkaStream[K, V],
+                                                      builder: StreamsBuilder,
+                                                      errorHandler: ErrorHandler)
+    extends KStream[K, V] {
 
   import org.eu.fuzzy.kafka.streams.error.CheckedOperation._
 
@@ -36,14 +35,19 @@ private[streams] case class StreamWrapper[K, V](
 
   override def filter(predicate: (K, V) => Boolean): KStream[K, V] = {
     val filteredStream = internalStream.filter { (key, value) =>
-      Try(predicate(key, value)).recover(errorHandler.handle(topic, FilterOperation, key, value)).get
+      Try(predicate(key, value))
+        .recover(errorHandler.handle(topic, FilterOperation, key, value))
+        .get
     }
     this.copy(anonymousTopic, filteredStream)
   }
 
+  // format: off
   override def map[KR, VR](mapper: (K, V) => (KR, VR))
-                          (implicit keySerde: KeySerde[KR], valueSerde: ValueSerde[VR]): KStream[KR, VR] =
+                          (implicit keySerde: KeySerde[KR],
+                           valueSerde: ValueSerde[VR]): KStream[KR, VR] =
     flatMap((key, value) => Seq(mapper(key, value)))
+  // format: on
 
   override def mapKeys[KR](mapper: K => KR)(implicit serde: KeySerde[KR]): KStream[KR, V] =
     map((key, value) => (mapper(key), value))(serde, topic.valueSerde)
@@ -51,112 +55,159 @@ private[streams] case class StreamWrapper[K, V](
   override def mapValues[VR](mapper: V => VR)(implicit serde: ValueSerde[VR]): KStream[K, VR] =
     flatMapValues(mapper.andThen(Seq(_)))
 
+  // format: off
   override def flatMap[KR, VR](mapper: (K, V) => Iterable[(KR, VR)])
-                              (implicit keySerde: KeySerde[KR], valueSerde: ValueSerde[VR]): KStream[KR, VR] = {
+                              (implicit keySerde: KeySerde[KR],
+                               valueSerde: ValueSerde[VR]): KStream[KR, VR] = {
+  // format: on
     val transformedStream = internalStream.flatMap[KR, VR] { (key, value) =>
-      Try(mapper(key, value)
-        .map(record => new KeyValue(record._1, record._2)))
+      Try(
+        mapper(key, value)
+          .map(record => new KeyValue(record._1, record._2)))
         .map(_.asJavaCollection)
-        .recover(errorHandler.handle(topic, FlatMapOperation, key, value)).get
+        .recover(errorHandler.handle(topic, FlatMapOperation, key, value))
+        .get
     }
     val newTopic = KTopic(keySerde, valueSerde)
     this.copy(newTopic, transformedStream)
   }
 
-  override def flatMapValues[VR](mapper: V => Iterable[VR])(implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: off
+  override def flatMapValues[VR](mapper: V => Iterable[VR])
+                                (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val transformedStream = internalStream.flatMapValues[VR] { value =>
-      Try(mapper(value).asJavaCollection).recover(errorHandler.handle(topic, FlatMapValuesOperation, value)).get
+      Try(mapper(value).asJavaCollection)
+        .recover(errorHandler.handle(topic, FlatMapValuesOperation, value))
+        .get
     }
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, transformedStream)
   }
 
-  override def innerJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV], mapper: (K, V) => GK, joiner: (V, GV) => VR)
-                                    (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  override def innerJoin[GK, GV, VR](
+      globalTable: KGlobalTable[GK, GV],
+      mapper: (K, V) => GK,
+      joiner: (V, GV) => VR)(implicit serde: ValueSerde[VR]): KStream[K, VR] = {
     val keyMapper: KeyValueMapper[K, V, GK] = (key, value) =>
-      Try(mapper(key, value)).recover(errorHandler.handle(topic, JoinByKeyOperation, key, value)).get
+      Try(mapper(key, value))
+        .recover(errorHandler.handle(topic, JoinByKeyOperation, key, value))
+        .get
     val joinedStream: KafkaStream[K, VR] = internalStream.join(
-      globalTable.internalTable, keyMapper, joiner.asInnerJoiner(topic, errorHandler)
-    )
+      globalTable.internalTable,
+      keyMapper,
+      joiner.asInnerJoiner(topic, errorHandler))
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
+  // format: off
   override def innerJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
                                 (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val joinSerde = Joined.`with`(topic.keySerde, topic.valueSerde, table.topic.valueSerde)
-    val joinedStream: KafkaStream[K, VR] = internalStream.join(
-      table.internalTable, joiner.asInnerJoiner(topic, errorHandler), joinSerde
-    )
+    val joinedStream: KafkaStream[K, VR] =
+      internalStream.join(table.internalTable, joiner.asInnerJoiner(topic, errorHandler), joinSerde)
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
-  override def innerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
+  // format: off
+  override def innerJoin[VO, VR](otherStream: KStream[K, VO],
+                                 joiner: (V, VO) => VR,
+                                 windows: JoinWindows)
                                 (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val joinSerde = Joined.`with`(topic.keySerde, topic.valueSerde, otherStream.topic.valueSerde)
     val joinedStream: KafkaStream[K, VR] = internalStream.join(
-      otherStream.internalStream, joiner.asInnerJoiner(topic, errorHandler), windows, joinSerde
-    )
+      otherStream.internalStream,
+      joiner.asInnerJoiner(topic, errorHandler),
+      windows,
+      joinSerde)
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
-  override def leftJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV], mapper: (K, V) => GK, joiner: (V, GV) => VR)
+  // format: off
+  override def leftJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV],
+                                    mapper: (K, V) => GK,
+                                    joiner: (V, GV) => VR)
                                    (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val keyMapper: KeyValueMapper[K, V, GK] = (key, value) =>
-      Try(mapper(key, value)).recover(errorHandler.handle(topic, JoinByKeyOperation, key, value)).get
+      Try(mapper(key, value))
+        .recover(errorHandler.handle(topic, JoinByKeyOperation, key, value))
+        .get
     val joinedStream: KafkaStream[K, VR] = internalStream.leftJoin(
-      globalTable.internalTable, keyMapper, joiner.asLeftJoiner(topic, errorHandler)
-    )
+      globalTable.internalTable,
+      keyMapper,
+      joiner.asLeftJoiner(topic, errorHandler))
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
+  // format: off
   override def leftJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
                                (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val joinSerde = Joined.`with`(topic.keySerde, topic.valueSerde, table.topic.valueSerde)
     val joinedStream: KafkaStream[K, VR] = internalStream.leftJoin(
-      table.internalTable, joiner.asLeftJoiner(topic, errorHandler), joinSerde
-    )
+      table.internalTable,
+      joiner.asLeftJoiner(topic, errorHandler),
+      joinSerde)
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
-  override def lefJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
+  // format: off
+  override def lefJoin[VO, VR](otherStream: KStream[K, VO],
+                               joiner: (V, VO) => VR,
+                               windows: JoinWindows)
                               (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+  // format: on
     val joinSerde = Joined.`with`(topic.keySerde, topic.valueSerde, otherStream.topic.valueSerde)
     val joinedStream: KafkaStream[K, VR] = internalStream.leftJoin(
-      otherStream.internalStream, joiner.asLeftJoiner(topic, errorHandler), windows, joinSerde
-    )
+      otherStream.internalStream,
+      joiner.asLeftJoiner(topic, errorHandler),
+      windows,
+      joinSerde)
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
-  override def outerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
+  // format: off
+  override def outerJoin[VO, VR](otherStream: KStream[K, VO],
+                                 joiner: (V, VO) => VR,
+                                 windows: JoinWindows)
                                 (implicit serde: ValueSerde[VR]): KStream[K, VR] = {
+    // format: on
     val joinSerde = Joined.`with`(topic.keySerde, topic.valueSerde, otherStream.topic.valueSerde)
     val joinedStream: KafkaStream[K, VR] = internalStream.outerJoin(
-      otherStream.internalStream, joiner.asOuterJoiner(topic, errorHandler), windows, joinSerde
-    )
+      otherStream.internalStream,
+      joiner.asOuterJoiner(topic, errorHandler),
+      windows,
+      joinSerde)
     val newTopic = KTopic(topic.keySerde, serde)
     this.copy(newTopic, joinedStream)
   }
 
   override def branch(predicates: ((K, V) => Boolean)*): Seq[KStream[K, V]] = {
-    val kafkaPredicates = predicates.map(predicate => new Predicate[K, V] {
-      override def test(key: K, value: V): Boolean =
-        Try(predicate(key, value)).recover(errorHandler.handle(topic, BranchOperation, value)).get
+    val kafkaPredicates = predicates.map(predicate =>
+      new Predicate[K, V] {
+        override def test(key: K, value: V): Boolean =
+          Try(predicate(key, value))
+            .recover(errorHandler.handle(topic, BranchOperation, value))
+            .get
     })
-    internalStream.branch(kafkaPredicates:_*).view
+    internalStream
+      .branch(kafkaPredicates: _*)
+      .view
       .map(this.copy(anonymousTopic, _))
   }
 
   override def split(predicate: (K, V) => Boolean): (KStream[K, V], KStream[K, V]) = {
-    val streams = branch(
-      (key, value) => predicate(key, value),
-      (key, value) => !predicate(key, value)
-    )
+    val streams =
+      branch((key, value) => predicate(key, value), (key, value) => !predicate(key, value))
     (streams(0), streams(1))
   }
 
@@ -185,20 +236,25 @@ private[streams] case class StreamWrapper[K, V](
   override def through(topic: String): KStream[K, V] =
     through(topic, Produced.`with`(this.topic.keySerde, this.topic.valueSerde))
 
+  // format: off
   override def aggregate[VR](initializer: () => VR, aggregator: (K, V, VR) => VR)
                             (implicit serde: ValueSerde[VR]): KTable[K, VR] =
     aggregate(initializer, aggregator, storeOptions(topic.keySerde, serde))
+  // format: on
 
-  override def aggregate[VR](
-      initializer: () => VR, aggregator: (K, V, VR) => VR, options: KTable.Options[K, VR]): KTable[K, VR] = {
+  override def aggregate[VR](initializer: () => VR,
+                             aggregator: (K, V, VR) => VR,
+                             options: KTable.Options[K, VR]): KTable[K, VR] = {
     val newTopic = toTopic(options)
     val newTable = internalStream.groupByKey.aggregate(
-      initializer.asInitializer(topic, errorHandler), aggregator.asAggregator(topic, errorHandler), options
-    )
+      initializer.asInitializer(topic, errorHandler),
+      aggregator.asAggregator(topic, errorHandler),
+      options)
     TableWrapper(newTopic, newTable, builder, errorHandler)
   }
 
-  override def reduce(reducer: (V, V) => V): KTable[K, V] = reduce(reducer, storeOptions(topic.keySerde, topic.valueSerde))
+  override def reduce(reducer: (V, V) => V): KTable[K, V] =
+    reduce(reducer, storeOptions(topic.keySerde, topic.valueSerde))
 
   def reduce(reducer: (V, V) => V, options: KTable.Options[K, V]): KTable[K, V] = {
     val newTable = internalStream.groupByKey.reduce(reducer.asReducer(topic, errorHandler), options)

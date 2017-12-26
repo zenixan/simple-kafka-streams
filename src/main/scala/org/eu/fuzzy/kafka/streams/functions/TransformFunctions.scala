@@ -11,6 +11,7 @@ import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
  * @tparam S  a type of stream, i.e. [[org.eu.fuzzy.kafka.streams.KStream]] or [[org.eu.fuzzy.kafka.streams.KTable]]
  */
 trait TransformFunctions[K, V, S[K, V]] {
+
   /**
    * Returns a new stream with a new key for each input record.
    *
@@ -52,5 +53,6 @@ trait TransformFunctions[K, V, S[K, V]] {
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#map]]
    */
-  def map[KR, VR](mapper: (K, V) => (KR, VR))(implicit keySerde: KeySerde[KR], valueSerde: ValueSerde[VR]): S[KR, VR]
+  def map[KR, VR](mapper: (K, V) => (KR, VR))(implicit keySerde: KeySerde[KR],
+                                              valueSerde: ValueSerde[VR]): S[KR, VR]
 }

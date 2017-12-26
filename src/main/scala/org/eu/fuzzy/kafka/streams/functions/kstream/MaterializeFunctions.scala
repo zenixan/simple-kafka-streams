@@ -9,7 +9,9 @@ import org.eu.fuzzy.kafka.streams.KStream
  * @tparam K  a type of record key
  * @tparam V  a type of record value
  */
-trait MaterializeFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.MaterializeFunctions[K, V] {
+trait MaterializeFunctions[K, V]
+    extends org.eu.fuzzy.kafka.streams.functions.MaterializeFunctions[K, V] {
+
   /**
    * Materializes this stream to a topic and creates a new stream from the topic.
    *

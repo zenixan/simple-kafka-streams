@@ -9,7 +9,9 @@ import org.eu.fuzzy.kafka.streams.KTable.Options
  * @tparam K  a type of primary key
  * @tparam V  a type of record value
  */
-trait FilterFunctions[K, V] extends org.eu.fuzzy.kafka.streams.functions.FilterFunctions[K, V, KTable] {
+trait FilterFunctions[K, V]
+    extends org.eu.fuzzy.kafka.streams.functions.FilterFunctions[K, V, KTable] {
+
   /**
    * Returns a new table that consists of all records of this table which satisfy the predicate.
    *

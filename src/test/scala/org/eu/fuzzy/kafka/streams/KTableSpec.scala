@@ -9,8 +9,10 @@ class KTableSpec extends FlatSpec with Matchers {
   import KTableSpec._
 
   "filter function" should "remove the record from the table" in {
-    val streamTopology = (topology: StreamsBuilder) => KTable(topology, TestInputTopic)
-      .filter((key, _) => key > 1).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KTable(topology, TestInputTopic)
+        .filter((key, _) => key > 1)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -19,19 +21,18 @@ class KTableSpec extends FlatSpec with Matchers {
   }
 
   "filter function" should "remove the record from the table if the error has occurred" in {
-    val streamTopology = (topology: StreamsBuilder) => KTable(topology, TestInputTopic)
-      .filter((_, _) => throw new NullPointerException).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KTable(topology, TestInputTopic)
+        .filter((_, _) => throw new NullPointerException)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .output(TestOutputTopic)
     records shouldEqual Seq((1, null))
   }
-
 }
 
 object KTableSpec {
-
   val TestInputTopic = KTopic[Int, String]("test-input-topic")
   val TestOutputTopic = KTopic[Int, String]("test-output-topic")
-
 }

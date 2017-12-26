@@ -11,34 +11,37 @@ import org.eu.fuzzy.kafka.streams.internals.storeOptions
  * @tparam V  a type of record value
  */
 trait AggregateFunctions[K, V] {
+
   /**
    * Returns a Kafka topic for this stream.
    *
-   * @note The name of topic is absent for the streams which are created by any intermediate operations, e.g.
-   *       [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
+   * @note The name of topic is absent for the streams which are created by any intermediate operations,
+   *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
    *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map()]], etc.
    */
   def topic: KTopic[K, V]
 
   /**
-   * Returns a new table with unmodified keys and values that represent the latest count (i.e., number of records) for each key.
+   * Returns a new table with unmodified keys and values that represent the latest count
+   * (i.e., number of records) for each key.
    *
    * The behavior of this operation is:
    *  - Records with `null` keys or values are ignored for the record streams.
    *  - Input records with null keys are ignored for the changelog streams.
-   *    Records with null values are not ignored but interpreted as “tombstones” for the corresponding key,
-   *    which indicate the deletion of the key from the table.
+   *    Records with `null` values are not ignored but interpreted as '''tombstones'''
+   *    for the corresponding key, which indicate the deletion of the key from the table.
    */
   def count(): KTable[K, Long] = count(storeOptions(topic.keySerde, LongValueSerde))
 
   /**
-   * Returns a new table with unmodified keys and values that represent the latest count (i.e., number of records) for each key.
+   * Returns a new table with unmodified keys and values that represent the latest count
+   * (i.e., number of records) for each key.
    *
    * The behavior of this operation is:
    *  - Records with `null` keys or values are ignored for the record streams.
    *  - Input records with null keys are ignored for the changelog streams.
-   *    Records with null values are not ignored but interpreted as “tombstones” for the corresponding key,
-   *    which indicate the deletion of the key from the table.
+   *    Records with `null` values are not ignored but interpreted as '''tombstones'''
+   *    for the corresponding key, which indicate the deletion of the key from the table.
    *
    * @param options  a set of options to use when materializing to the local state store
    *

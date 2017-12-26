@@ -7,6 +7,7 @@ import org.eu.fuzzy.kafka.streams.KTopic
  * Represents a strategy for handling stream errors.
  */
 trait ErrorHandler {
+
   /**
    * Returns an error handler for the invalid record.
    *
@@ -16,5 +17,7 @@ trait ErrorHandler {
    * @param operation  a name of operation that's caused an error
    * @param args  a list of arguments for the operation that's caused an error
    */
-  def handle[R : ClassTag](topic: KTopic[_, _], operation: CheckedOperation, args: Any*): PartialFunction[Throwable, R]
+  def handle[R: ClassTag](topic: KTopic[_, _],
+                          operation: CheckedOperation,
+                          args: Any*): PartialFunction[Throwable, R]
 }

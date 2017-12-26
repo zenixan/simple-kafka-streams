@@ -156,6 +156,7 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  * </table>
  */
 trait JoinFunctions[K, V] {
+
   /**
    * $innerJoinDesc
    *
@@ -168,7 +169,10 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#innerJoin]]
    */
-  def innerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)(implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: off
+  def innerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)
+                       (implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: on
 
   /**
    * $innerJoinDesc
@@ -182,7 +186,9 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#innerJoin]]
    */
-  def innerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR, options: Options[K, VR]): KTable[K, VR]
+  def innerJoin[VO, VR](other: KTable[K, VO],
+                        joiner: (V, VO) => VR,
+                        options: Options[K, VR]): KTable[K, VR]
 
   /**
    * $leftJoinDesc
@@ -196,7 +202,10 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#leftJoin]]
    */
-  def leftJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)(implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: off
+  def leftJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)
+                      (implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: on
 
   /**
    * $leftJoinDesc
@@ -210,7 +219,9 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#leftJoin]]
    */
-  def leftJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR, options: Options[K, VR]): KTable[K, VR]
+  def leftJoin[VO, VR](other: KTable[K, VO],
+                       joiner: (V, VO) => VR,
+                       options: Options[K, VR]): KTable[K, VR]
 
   /**
    * $outerJoinDesc
@@ -224,7 +235,10 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#outerJoin]]
    */
-  def outerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)(implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: off
+  def outerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR)
+                       (implicit serde: ValueSerde[VR]): KTable[K, VR]
+  // format: on
 
   /**
    * $outerJoinDesc
@@ -238,5 +252,7 @@ trait JoinFunctions[K, V] {
    *
    * @see [[org.apache.kafka.streams.kstream.KTable#outerJoin]]
    */
-  def outerJoin[VO, VR](other: KTable[K, VO], joiner: (V, VO) => VR, options: Options[K, VR]): KTable[K, VR]
+  def outerJoin[VO, VR](other: KTable[K, VO],
+                        joiner: (V, VO) => VR,
+                        options: Options[K, VR]): KTable[K, VR]
 }

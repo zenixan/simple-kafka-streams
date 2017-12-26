@@ -9,8 +9,10 @@ class KStreamSpec extends FlatSpec with Matchers {
   import KStreamSpec._
 
   "filter function" should "remove the record from the stream" in {
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .filter((key, _) => key > 1).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .filter((key, _) => key > 1)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -19,8 +21,10 @@ class KStreamSpec extends FlatSpec with Matchers {
   }
 
   "filter function" should "remove the record from the stream if the error has occurred" in {
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .filter((_, _) => throw new NullPointerException).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .filter((_, _) => throw new NullPointerException)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .output(TestOutputTopic)
@@ -28,8 +32,10 @@ class KStreamSpec extends FlatSpec with Matchers {
   }
 
   "filterNot function" should "remove the record from the stream" in {
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .filterNot((key, _) => key == 1).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .filterNot((key, _) => key == 1)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -38,8 +44,10 @@ class KStreamSpec extends FlatSpec with Matchers {
   }
 
   "filterKeys function" should "remove the record from the stream" in {
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .filterKeys(_ > 1).to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .filterKeys(_ > 1)
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -48,8 +56,10 @@ class KStreamSpec extends FlatSpec with Matchers {
   }
 
   "filterValues function" should "remove the record from the stream" in {
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .filterValues(_ == "Record 2").to(TestOutputTopic.name)
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .filterValues(_ == "Record 2")
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -60,11 +70,14 @@ class KStreamSpec extends FlatSpec with Matchers {
 
   "branch function" should "split the stream into two streams" in {
     val outputTopics = Seq(
-      KTopic[Int, String]("test-output-topic1"), KTopic[Int, String]("test-output-topic2")
+      KTopic[Int, String]("test-output-topic1"),
+      KTopic[Int, String]("test-output-topic2")
     )
-    val streamTopology = (topology: StreamsBuilder) => KStream(topology, TestInputTopic)
-      .branch((key, _) => key == 1, (key, _) => key == 2)
-      .zipWithIndex.foreach(entry => entry._1.to(outputTopics(entry._2).name))
+    val streamTopology = (topology: StreamsBuilder) =>
+      KStream(topology, TestInputTopic)
+        .branch((key, _) => key == 1, (key, _) => key == 2)
+        .zipWithIndex
+        .foreach(entry => entry._1.to(outputTopics(entry._2).name))
     val mockStream = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, "Record 2"))
@@ -75,7 +88,8 @@ class KStreamSpec extends FlatSpec with Matchers {
 
   "split function" should "split the stream into two streams" in {
     val outputTopics = Seq(
-      KTopic[Int, String]("test-output-topic1"), KTopic[Int, String]("test-output-topic2")
+      KTopic[Int, String]("test-output-topic1"),
+      KTopic[Int, String]("test-output-topic2")
     )
     val streamTopology = (topology: StreamsBuilder) => {
       val pair = KStream(topology, TestInputTopic).split((key, _) => key == 1)
@@ -89,12 +103,9 @@ class KStreamSpec extends FlatSpec with Matchers {
     mockStream.output(outputTopics(0)) shouldEqual Seq((1, "Record 1"))
     mockStream.output(outputTopics(1)) shouldEqual Seq((2, "Record 2"), (3, "Record 3"))
   }
-
 }
 
 object KStreamSpec {
-
   val TestInputTopic = KTopic[Int, String]("test-input-topic")
   val TestOutputTopic = KTopic[Int, String]("test-output-topic")
-
 }

@@ -7,6 +7,7 @@ package org.eu.fuzzy.kafka.streams.functions
  * @tparam V  a type of record value
  */
 trait IterativeFunctions[K, V] {
+
   /**
    * Performs an action for each input record.
    *

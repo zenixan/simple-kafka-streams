@@ -12,6 +12,7 @@ import org.apache.kafka.common.serialization.{Deserializer, Serializer, Serde}
 trait ValueSerde[T] extends Serde[T] with Configurable
 
 object ValueSerde {
+
   /**
    * Creates a wrapper for a serializer and deserializer.
    *
@@ -29,8 +30,9 @@ object ValueSerde {
    * @param kafkaSerializer  an interface for converting objects to bytes
    * @param kafkaDeserializer  an interface for converting bytes to objects
    */
-  def apply[T](kafkaSerializer: Serializer[T], kafkaDeserializer: Deserializer[T]): ValueSerde[T] = new ValueSerde[T]() {
-    override def deserializer(): Deserializer[T] = kafkaDeserializer
-    override def serializer(): Serializer[T] = kafkaSerializer
-  }
+  def apply[T](kafkaSerializer: Serializer[T], kafkaDeserializer: Deserializer[T]): ValueSerde[T] =
+    new ValueSerde[T]() {
+      override def deserializer(): Deserializer[T] = kafkaDeserializer
+      override def serializer(): Serializer[T] = kafkaSerializer
+    }
 }
