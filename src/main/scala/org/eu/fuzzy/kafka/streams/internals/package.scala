@@ -1,19 +1,29 @@
 package org.eu.fuzzy.kafka.streams
 
-import java.util.Objects.requireNonNull
+import scala.util.Try
 
 import org.apache.kafka.common.utils.Bytes
-import org.apache.kafka.streams.kstream._
+import org.apache.kafka.streams.kstream.{KeyValueMapper, ValueJoiner, Windowed}
+import org.apache.kafka.streams.kstream.{Aggregator, Initializer, Materialized, Reducer}
+import org.apache.kafka.streams.processor.StateStore
 import org.apache.kafka.streams.state.KeyValueStore
-import org.eu.fuzzy.kafka.streams.KTable.Options
-import org.eu.fuzzy.kafka.streams.error.ErrorHandler
-import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
 
-import scala.util.Try
+import org.eu.fuzzy.kafka.streams.error.ErrorHandler
+import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, WindowedKeySerde, ValueSerde}
 
 package object internals {
 
   import org.eu.fuzzy.kafka.streams.error.CheckedOperation._
+
+  private[streams] implicit class RichKeyMapper[K, V, KR](f: (K, V) => KR) {
+
+    /** Wraps a key-mapper function by the given error handler.  */
+    @inline def asKeyMapper(topic: KTopic[K, V], handler: ErrorHandler): KeyValueMapper[K, V, KR] =
+      (key, value) =>
+        Try(f(key, value))
+          .recover(handler.handle(topic, MapOperation, key, value))
+          .get
+  }
 
   private[streams] implicit class RichJoiner[V, VO, VR](f: (V, VO) => VR) {
 
@@ -67,14 +77,18 @@ package object internals {
           .get
   }
 
-  /** Returns an anonymous topic for the specified materializing options. */
-  @inline private[streams] def toTopic[KR, VR](options: Options[KR, VR]): KTopic[KR, VR] = {
+  /** Returns an anonymous topic for the given materializing options. */
+  @inline private[streams] def toTopic[K, V](
+      options: Materialized[K, V, _ <: StateStore]): KTopic[K, V] = {
     val materialized = new InternalMaterialized(options)
-    val keySerde = requireNonNull(materialized.keySerde,
-                                  "A serialization format for the record key cannot be null")
-    val valueSerde = requireNonNull(materialized.valueSerde,
-                                    "A serialization format for the record value cannot be null")
-    KTopic(keySerde, valueSerde)
+    KTopic(materialized.keySerde, materialized.valueSerde)
+  }
+
+  /** Returns an anonymous windowed topic for the given materializing options. */
+  @inline private[streams] def toWindowedTopic[K, V](
+      options: Materialized[K, V, _ <: StateStore]): KTopic[Windowed[K], V] = {
+    val materialized = new InternalMaterialized(options)
+    KTopic(WindowedKeySerde(materialized.keySerde), materialized.valueSerde)
   }
 
   /** Returns the materialization options. */

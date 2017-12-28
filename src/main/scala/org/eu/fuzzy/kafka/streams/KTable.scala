@@ -3,12 +3,10 @@ package org.eu.fuzzy.kafka.streams
 import org.apache.kafka.common.utils.Bytes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.kstream.{Materialized, KTable => KafkaTable}
-import org.apache.kafka.streams.state.KeyValueStore
-import org.apache.kafka.streams.state.WindowStore
+import org.apache.kafka.streams.state.{KeyValueStore, SessionStore, WindowStore}
 
 import org.eu.fuzzy.kafka.streams.functions.{ktable, IterativeFunctions, MaterializeFunctions}
-import org.eu.fuzzy.kafka.streams.functions.ktable.AggregateFunctions
-import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
+import org.eu.fuzzy.kafka.streams.functions.ktable.GroupFunctions
 import org.eu.fuzzy.kafka.streams.internals.storeOptions
 import org.eu.fuzzy.kafka.streams.error.ErrorHandler
 import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
@@ -31,6 +29,7 @@ trait KTable[K, V]
     with ktable.TransformFunctions[K, V]
     with IterativeFunctions[K, V]
     with ktable.JoinFunctions[K, V]
+    with GroupFunctions[K, V]
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
@@ -51,12 +50,20 @@ object KTable {
   type Options[K, V] = Materialized[K, V, KeyValueStore[Bytes, Array[Byte]]]
 
   /**
-   * Represents a set of window options for table materializing to the local state store.
+   * Represents a set of options for storing the windowed aggregated values to the local state store.
    *
    * @tparam K  a type of primary key
    * @tparam V  a type of record value
    */
   type WindowOptions[K, V] = Materialized[K, V, WindowStore[Bytes, Array[Byte]]]
+
+  /**
+   * Represents a set of options for storing the aggregated values of sessions to the local state store.
+   *
+   * @tparam K  a type of primary key
+   * @tparam V  a type of record value
+   */
+  type SessionOptions[K, V] = Materialized[K, V, SessionStore[Bytes, Array[Byte]]]
 
   /**
    * Creates a table for the given topic.
@@ -103,7 +110,7 @@ object KTable {
                   options: Options[K, V],
                   handler: ErrorHandler): KTable[K, V] = {
     val materialized = options.withKeySerde(topic.keySerde).withValueSerde(topic.valueSerde)
-    KStream(builder, topic, handler).reduce((_, newValue) => newValue, materialized)
+    KStream(builder, topic, handler).groupByKey.reduce((_, newValue) => newValue, materialized)
   }
 
   /**
@@ -133,24 +140,6 @@ object KTable {
      *       i.e. each record of this changelog stream is no longer treated as an update record.
      */
     def toStream: KStream[K, V]
-
-    /**
-     * Re-groups the records of this table using the given function.
-     *
-     * @tparam KR  a new type of record key
-     * @tparam VR  a new type of record value
-     *
-     * @param mapper  a function to compute a new grouping key and value to be aggregated
-     * @param keySerde  a serialization format for the output record key
-     * @param valueSerde  a serialization format for the output record value
-     *
-     * @see [[org.apache.kafka.streams.kstream.KTable#groupBy]]
-     */
-    // format: off
-    def groupBy[KR, VR](mapper: (K, V) => (KR, VR))
-                       (implicit keySerde: KeySerde[KR],
-                        valueSerde: ValueSerde[VR]): AggregateFunctions[KR, VR]
-    // format: on
 
     /** Returns an underlying instance of Kafka Table. */
     private[streams] def internalTable: KafkaTable[K, V]

@@ -56,6 +56,7 @@ private[streams] final case class TableWrapper[K, V](topic: KTopic[K, V],
     val newTopic = toTopic(options)
     toStream
       .map(mapper)(newTopic.keySerde, newTopic.valueSerde)
+      .groupByKey
       .reduce((_, newValue) => newValue, options)
   }
 
@@ -138,18 +139,22 @@ private[streams] final case class TableWrapper[K, V](topic: KTopic[K, V],
 
   override def to(topic: String, options: Produced[K, V]): Unit = toStream.to(topic, options)
 
+  override def groupByKey: AggregateFunctions[K, V] = {
+    ???
+  }
+
   // format: off
-  def groupBy[KR, VR](mapper: (K, V) => (KR, VR))
-                     (implicit keySerde: KeySerde[KR],
-                      valueSerde: ValueSerde[VR]): AggregateFunctions[KR, VR] = {
+  override def groupBy[KR](mapper: (K, V) => KR)
+                          (implicit serde: KeySerde[KR]): AggregateFunctions[KR, V] = {
   // format: on
-    val tableMapper: KeyValueMapper[K, V, KeyValue[KR, VR]] = (key, value) =>
+    val tableMapper: KeyValueMapper[K, V, KeyValue[KR, V]] = (key, value) =>
       Try(mapper(key, value))
-        .map(record => new KeyValue(record._1, record._2))
+        .map(newKey => new KeyValue(newKey, value))
         .recover(errorHandler.handle(topic, MapOperation, key, value))
         .get
-    val groupedTable = internalTable.groupBy(tableMapper, Serialized.`with`(keySerde, valueSerde))
-    val newTopic = KTopic(keySerde, valueSerde)
+    val groupedTable =
+      internalTable.groupBy(tableMapper, Serialized.`with`(serde, topic.valueSerde))
+    val newTopic = KTopic(serde, topic.valueSerde)
     new TableAggFunctions(newTopic, groupedTable, builder, errorHandler)
   }
 }

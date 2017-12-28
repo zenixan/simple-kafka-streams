@@ -1,5 +1,6 @@
 package org.eu.fuzzy.kafka.streams
 
+import java.util.Objects.requireNonNull
 import serialization.{KeySerde, ValueSerde}
 
 /**
@@ -41,6 +42,8 @@ object KTopic {
   def apply[K, V](name: String)(implicit keySerde: KeySerde[K],
                                 valueSerde: ValueSerde[V]): KNamedTopic[K, V] = {
     require(name.nonEmpty, "name cannot be empty")
+    requireNonNull(keySerde, "A serialization format for the record key cannot be null")
+    requireNonNull(valueSerde, "A serialization format for the record value cannot be null")
     KNamedTopic(name, keySerde, valueSerde)
   }
 
@@ -55,8 +58,11 @@ object KTopic {
    */
   def apply[K, V](implicit
                   keySerde: KeySerde[K],
-                  valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] =
+                  valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] = {
+    requireNonNull(keySerde, "A serialization format for the record key cannot be null")
+    requireNonNull(valueSerde, "A serialization format for the record value cannot be null")
     KAnonymousTopic(keySerde, valueSerde)
+  }
 }
 
 /**

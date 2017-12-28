@@ -7,7 +7,7 @@ import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.{Consumed, StreamsBuilder}
 import org.apache.kafka.streams.kstream.{KStream => KafkaStream}
 
-import org.eu.fuzzy.kafka.streams.functions.{FilterFunctions, kstream}
+import org.eu.fuzzy.kafka.streams.functions.{kstream, FilterFunctions}
 import org.eu.fuzzy.kafka.streams.internals.StreamWrapper
 import org.eu.fuzzy.kafka.streams.error.ErrorHandler
 import org.eu.fuzzy.kafka.streams.error.CheckedOperation.DeserializeOperation
@@ -31,7 +31,7 @@ trait KStream[K, V]
     with kstream.TransformFunctions[K, V]
     with kstream.IterativeFunctions[K, V]
     with kstream.JoinFunctions[K, V]
-    with kstream.AggregateFunctions[K, V]
+    with kstream.GroupFunctions[K, V]
 
 /**
  * Represents an abstraction of a record stream.

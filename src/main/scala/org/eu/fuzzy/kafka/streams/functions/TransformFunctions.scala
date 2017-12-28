@@ -10,7 +10,7 @@ import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
  * @tparam V  a type of record value
  * @tparam S  a type of stream, i.e. [[org.eu.fuzzy.kafka.streams.KStream]] or [[org.eu.fuzzy.kafka.streams.KTable]]
  */
-trait TransformFunctions[K, V, S[K, V]] {
+trait TransformFunctions[K, V, S[_, _]] {
 
   /**
    * Returns a new stream with a new key for each input record.

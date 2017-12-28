@@ -1,5 +1,6 @@
 package org.eu.fuzzy.kafka.streams.functions.ktable
 
+import scala.language.higherKinds
 import org.eu.fuzzy.kafka.streams.KTable
 import org.eu.fuzzy.kafka.streams.KTable.Options
 import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
@@ -44,7 +45,7 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  *    the resulting table. If that happens, any next input record for that key will re-initialize its aggregate value.
  */
 trait AggregateFunctions[K, V]
-    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, V] {
+    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, K, V, Options] {
 
   /**
    * $aggregateDesc
