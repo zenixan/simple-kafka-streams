@@ -1,25 +1,18 @@
 package org.eu.fuzzy.kafka.streams.functions
 
-import org.eu.fuzzy.kafka.streams.{KTable, KTopic}
-import org.eu.fuzzy.kafka.streams.serialization.LongValueSerde
-import org.eu.fuzzy.kafka.streams.internals.storeOptions
+import scala.language.higherKinds
+import org.eu.fuzzy.kafka.streams.KTable
 
 /**
  * Represents a set of aggregation functions for the record/changelog stream.
  *
- * @tparam K  a type of record key
+ * @tparam K  a type of input record key
+ * @tparam KR a type of output record key
  * @tparam V  a type of record value
+ * @tparam O  a type of options to use when materializing to the local state store, e.g.
+ *            [[org.eu.fuzzy.kafka.streams.KTable.Options]]
  */
-trait AggregateFunctions[K, V] {
-
-  /**
-   * Returns a Kafka topic for this stream.
-   *
-   * @note The name of topic is absent for the streams which are created by any intermediate operations,
-   *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
-   *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map()]], etc.
-   */
-  def topic: KTopic[K, V]
+trait AggregateFunctions[K, KR, V, O[_ <: K, _]] {
 
   /**
    * Returns a new table with unmodified keys and values that represent the latest count
@@ -31,7 +24,7 @@ trait AggregateFunctions[K, V] {
    *    Records with `null` values are not ignored but interpreted as '''tombstones'''
    *    for the corresponding key, which indicate the deletion of the key from the table.
    */
-  def count(): KTable[K, Long] = count(storeOptions(topic.keySerde, LongValueSerde))
+  def count(): KTable[KR, Long]
 
   /**
    * Returns a new table with unmodified keys and values that represent the latest count
@@ -48,5 +41,5 @@ trait AggregateFunctions[K, V] {
    * @see [[org.apache.kafka.streams.kstream.KGroupedStream#count]]
    * @see [[org.apache.kafka.streams.kstream.KGroupedTable#count]]
    */
-  def count(options: KTable.Options[K, Long]): KTable[K, Long]
+  def count(options: O[K, Long]): KTable[KR, Long]
 }

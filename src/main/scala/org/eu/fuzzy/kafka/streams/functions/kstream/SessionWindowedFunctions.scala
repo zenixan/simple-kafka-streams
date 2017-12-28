@@ -1,17 +1,15 @@
 package org.eu.fuzzy.kafka.streams.functions.kstream
 
-import scala.language.higherKinds
+import org.apache.kafka.streams.kstream.Windowed
 import org.eu.fuzzy.kafka.streams.KTable
+import org.eu.fuzzy.kafka.streams.KTable.SessionOptions
 import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
 
 /**
- * Represents a set of aggregation functions for a record stream.
+ * Represents a set of aggregation functions with session-based windowing for a record stream.
  *
  * @tparam K  a type of record key
- * @tparam KR a type of output record key
  * @tparam V  a type of record value
- * @tparam O  a type of options to use when materializing to the local state store, e.g.
- *            [[org.eu.fuzzy.kafka.streams.KTable.Options]]
  *
  * @define aggregateDesc
  * Returns a new table with unmodified keys and values that represent the latest (rolling) aggregate for each key.
@@ -22,6 +20,8 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  * The behavior of this operation is:
  *  - Records with `null` keys or values are ignored.
  *  - When a record key is received for the first time, the initializer is called.
+ *  - When the windows overlap, they are merged using the merger into a single session and
+ *    the old sessions are discarded.
  *
  * @define reduceDesc
  * Returns a new table with unmodified keys and values that represent the latest (rolling) aggregate for each key.
@@ -31,8 +31,11 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  *  - The reducer will be called with the last reduced value and new value if a record with a non-null
  *    value is received.
  */
-trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
-    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, KR, V, O] {
+trait SessionWindowedFunctions[K, V]
+    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K,
+                                                                    Windowed[K],
+                                                                    V,
+                                                                    SessionOptions] {
 
   /**
    * $aggregateDesc
@@ -41,36 +44,43 @@ trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
    *
    * @param initializer  a function to provide an initial intermediate aggregation result
    * @param aggregator  a function to compute a new aggregate result
-   * @param serde  a serialization format for the output record value
-   */
-  // format: off
-  def aggregate[VR](initializer: () => VR, aggregator: (K, V, VR) => VR)
-                   (implicit serde: ValueSerde[VR]): KTable[KR, VR]
-  // format: on
-
-  /**
-   * $aggregateDesc
-   *
-   * @tparam VR  a type of the aggregate value
-   *
-   * @param initializer  a function to provide an initial intermediate aggregation result
-   * @param aggregator  a function to compute a new aggregate result
+   * @param merger  a function to merge two existing sessions into one
    * @param options  a set of options to use when materializing to the local state store
    *
-   * @see [[org.apache.kafka.streams.kstream.KGroupedStream#aggregate]]
+   * @see [[org.apache.kafka.streams.kstream.SessionWindowedKStream#aggregate]]
    */
   def aggregate[VR](initializer: () => VR,
                     aggregator: (K, V, VR) => VR,
-                    options: O[K, VR]): KTable[KR, VR]
+                    merger: (K, VR, VR) => VR,
+                    options: SessionOptions[K, VR]): KTable[Windowed[K], VR]
+
+  /**
+   * $aggregateDesc
+   *
+   * @tparam VR  a type of the aggregate value
+   *
+   * @param initializer  a function to provide an initial intermediate aggregation result
+   * @param aggregator  a function to compute a new aggregate result
+   * @param merger  a function to merge two existing sessions into one
+   * @param serde  a serialization format for the output record value
+   *
+   * @see [[org.apache.kafka.streams.kstream.SessionWindowedKStream#aggregate]]
+   */
+  // format: off
+  def aggregate[VR](initializer: () => VR,
+                    aggregator: (K, V, VR) => VR,
+                    merger: (K, VR, VR) => VR)
+                   (implicit serde: ValueSerde[VR]): KTable[Windowed[K], VR]
+  // format: on
 
   /**
    * $reduceDesc
    *
    * @param reducer  a function to combine the values of records
    *
-   * @see [[org.apache.kafka.streams.kstream.KGroupedStream#reduce]]
+   * @see [[org.apache.kafka.streams.kstream.SessionWindowedKStream#reduce]]
    */
-  def reduce(reducer: (V, V) => V): KTable[KR, V]
+  def reduce(reducer: (V, V) => V): KTable[Windowed[K], V]
 
   /**
    * $reduceDesc
@@ -78,7 +88,7 @@ trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
    * @param reducer  a function to combine the values of records
    * @param options  a set of options to use when materializing to the local state store
    *
-   * @see [[org.apache.kafka.streams.kstream.KGroupedStream#reduce]]
+   * @see [[org.apache.kafka.streams.kstream.SessionWindowedKStream#reduce]]
    */
-  def reduce(reducer: (V, V) => V, options: O[K, V]): KTable[KR, V]
+  def reduce(reducer: (V, V) => V, options: SessionOptions[K, V]): KTable[Windowed[K], V]
 }

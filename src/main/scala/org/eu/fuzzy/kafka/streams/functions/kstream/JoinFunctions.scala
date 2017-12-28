@@ -154,7 +154,7 @@ trait JoinFunctions[K, V] {
    *
    * @param otherStream  a stream to be joined with this stream
    * @param joiner  a function to compute the join result for a pair of matching records
-   * @param windows  a time window
+   * @param windows  a sliding window specification
    * @param serde  a serialization format for the output record value
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
@@ -314,7 +314,7 @@ trait JoinFunctions[K, V] {
    *
    * @param otherStream  a stream to be joined with this stream
    * @param joiner  a function to compute the join result for a pair of matching records
-   * @param windows  a time window
+   * @param windows  a sliding window specification
    * @param serde  a serialization format for the output record value
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
@@ -364,7 +364,7 @@ trait JoinFunctions[K, V] {
    *
    * @param otherStream  a stream to be joined with this stream
    * @param joiner  a function to compute the join result for a pair of matching records
-   * @param windows  a time window
+   * @param windows  a sliding window specification
    * @param serde  a serialization format for the output record value
    */
   // format: off

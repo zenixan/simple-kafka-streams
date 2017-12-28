@@ -1,15 +1,20 @@
 package org.eu.fuzzy.kafka.streams.internals
 
-import scala.collection.JavaConverters._
 import scala.util.Try
+import scala.collection.JavaConverters._
 
-import org.apache.kafka.streams.kstream.{Predicate, KeyValueMapper, JoinWindows, Joined, Produced}
+import org.apache.kafka.streams.kstream.{Predicate, KeyValueMapper, Joined, Produced, Serialized}
+import org.apache.kafka.streams.kstream.{Window, Windows, JoinWindows, SessionWindows}
 import org.apache.kafka.streams.kstream.{KStream => KafkaStream}
 import org.apache.kafka.streams.{KeyValue, StreamsBuilder}
 
 import org.eu.fuzzy.kafka.streams.{KGlobalTable, KStream, KTable, KTopic}
-import org.eu.fuzzy.kafka.streams.error.ErrorHandler
+import org.eu.fuzzy.kafka.streams.KTable.Options
+import org.eu.fuzzy.kafka.streams.functions.kstream.AggregateFunctions
+import org.eu.fuzzy.kafka.streams.functions.kstream.SessionWindowedFunctions
+import org.eu.fuzzy.kafka.streams.functions.kstream.TimeWindowedFunctions
 import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, ValueSerde}
+import org.eu.fuzzy.kafka.streams.error.ErrorHandler
 
 /**
  * Implements an improved wrapper for the record stream.
@@ -236,31 +241,43 @@ private[streams] final case class StreamWrapper[K, V](topic: KTopic[K, V],
   override def through(topic: String): KStream[K, V] =
     through(topic, Produced.`with`(this.topic.keySerde, this.topic.valueSerde))
 
+  override def groupByKey: AggregateFunctions[K, K, V, Options] = {
+    val groupedStream =
+      internalStream.groupByKey(Serialized.`with`(topic.keySerde, topic.valueSerde))
+    new StreamAggFunctions(anonymousTopic, internalStream.groupByKey, builder, errorHandler)
+  }
+
   // format: off
-  override def aggregate[VR](initializer: () => VR, aggregator: (K, V, VR) => VR)
-                            (implicit serde: ValueSerde[VR]): KTable[K, VR] =
-    aggregate(initializer, aggregator, storeOptions(topic.keySerde, serde))
+  override def groupBy[KR](mapper: (K, V) => KR)
+                          (implicit serde: KeySerde[KR]): AggregateFunctions[KR, KR, V, Options] =
+    map((key, value) => (mapper(key, value), value))(serde, topic.valueSerde).groupByKey
   // format: on
 
-  override def aggregate[VR](initializer: () => VR,
-                             aggregator: (K, V, VR) => VR,
-                             options: KTable.Options[K, VR]): KTable[K, VR] = {
-    val newTopic = toTopic(options)
-    val newTable = internalStream.groupByKey.aggregate(
-      initializer.asInitializer(topic, errorHandler),
-      aggregator.asAggregator(topic, errorHandler),
-      options)
-    TableWrapper(newTopic, newTable, builder, errorHandler)
+  override def windowedByKey(windows: SessionWindows): SessionWindowedFunctions[K, V] = {
+    val groupedStream =
+      internalStream
+        .groupByKey(Serialized.`with`(topic.keySerde, topic.valueSerde))
+        .windowedBy(windows)
+    new SessionAggFunctions(anonymousTopic, groupedStream, builder, errorHandler)
   }
 
-  override def reduce(reducer: (V, V) => V): KTable[K, V] =
-    reduce(reducer, storeOptions(topic.keySerde, topic.valueSerde))
+  // format: off
+  override def windowedBy[KR](mapper: (K, V) => KR, windows: SessionWindows)
+                             (implicit serde: KeySerde[KR]): SessionWindowedFunctions[KR, V] =
+    map((key, value) => (mapper(key, value), value))(serde, topic.valueSerde).windowedByKey(windows)
+  // format: on
 
-  def reduce(reducer: (V, V) => V, options: KTable.Options[K, V]): KTable[K, V] = {
-    val newTable = internalStream.groupByKey.reduce(reducer.asReducer(topic, errorHandler), options)
-    TableWrapper(topic, newTable, builder, errorHandler)
+  override def windowedByKey[W <: Window](windows: Windows[W]): TimeWindowedFunctions[K, V] = {
+    val groupedStream = internalStream
+      .groupByKey(Serialized.`with`(topic.keySerde, topic.valueSerde))
+      .windowedBy(windows)
+    new TimeAggFunctions(anonymousTopic, groupedStream, builder, errorHandler)
   }
 
-  override def count(options: KTable.Options[K, Long]): KTable[K, Long] =
-    aggregate(() => 0L, (_, _, counter: Long) => counter + 1, options)
+  // format: off
+  override def windowedBy[KR, W <: Window](mapper: (K, V) => KR, windows: Windows[W])
+                                          (implicit
+                                           serde: KeySerde[KR]): TimeWindowedFunctions[KR, V] =
+    map((key, value) => (mapper(key, value), value))(serde, topic.valueSerde).windowedByKey(windows)
+  // format: on
 }

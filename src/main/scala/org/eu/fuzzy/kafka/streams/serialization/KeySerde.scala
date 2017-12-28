@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams.serialization
 
 import scala.annotation.implicitNotFound
-import org.apache.kafka.common.serialization.{Deserializer, Serializer, Serde}
+import org.apache.kafka.common.serialization.{Serde, Serializer, Deserializer}
 
 /**
  * A wrapper for a serializer and deserializer of the given key type.
@@ -20,7 +20,7 @@ object KeySerde {
    *
    * @param serde  a source wrapper to copy
    */
-  def apply[T](serde: Serde[T]): KeySerde[T] = KeySerde(serde.serializer, serde.deserializer)
+  def apply[T](serde: Serde[T]): KeySerde[T] = apply(serde.serializer, serde.deserializer)
 
   /**
    * Creates a wrapper for a serializer and deserializer.

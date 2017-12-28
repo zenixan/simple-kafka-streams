@@ -5,13 +5,11 @@ import scala.language.higherKinds
 /**
  * Represents a set of functions to filter the record/changelog stream.
  *
- * @define d dd
- *
  * @tparam K  a type of record key
  * @tparam V  a type of record value
  * @tparam S  a type of stream, i.e. [[org.eu.fuzzy.kafka.streams.KStream]] or [[org.eu.fuzzy.kafka.streams.KTable]]
  */
-trait FilterFunctions[K, V, S[K, V]] {
+trait FilterFunctions[K, V, S[_ <: K, _ <: V]] {
 
   /**
    * Returns a new stream that consists of all records of this stream which satisfy the predicate.

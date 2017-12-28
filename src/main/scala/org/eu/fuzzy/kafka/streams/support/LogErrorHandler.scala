@@ -81,21 +81,28 @@ object LogErrorHandler {
         Unit.asInstanceOf[R]
 
       case initializerError if (operation == InitializerOperation) =>
-        logger.error(s"The aggregateByKey function is failed to calculate an initial value",
+        logger.error(s"The aggregate function is failed to calculate an initial value",
                      initializerError)
         null.asInstanceOf[R]
+
+      case mergeError if (operation == MergeOperation) =>
+        val Seq(key, aggValue1, aggValue2) = args
+        logger.error(
+          s"The aggregate function is failed to merge a aggregated value $aggValue1 with the value $aggValue2 for the key $key",
+          mergeError)
+        aggValue1.asInstanceOf[R]
 
       case aggregateError if (operation == AggregateOperation) =>
         val Seq(key, value, aggValue) = args
         logger.error(
-          s"The aggregateByKey function is failed for the record <$key:$value> and the following aggregate value $aggValue",
+          s"The aggregate function is failed for the record <$key:$value> and the following aggregate value $aggValue",
           aggregateError)
         aggValue.asInstanceOf[R]
 
       case reduceError if (operation == ReduceOperation) =>
         val Seq(aggValue, newValue) = args
         logger.error(
-          s"The reduceByKey function is failed for the new value $newValue and the following aggregate value $aggValue",
+          s"The reduce function is failed for the new value $newValue and the following aggregate value $aggValue",
           reduceError)
         aggValue.asInstanceOf[R]
     }

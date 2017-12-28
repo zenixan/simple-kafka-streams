@@ -3,7 +3,7 @@ package org.eu.fuzzy.kafka.streams.error
 /**
  * Represents an identity of operation that's protected by a stream error handler.
  *
- * @param name  a name of operation
+ * @param name  a name of stream operation
  */
 sealed abstract class CheckedOperation(val name: String)
 
@@ -20,6 +20,7 @@ object CheckedOperation {
   case object PeekOperation extends CheckedOperation("peek")
 
   case object InitializerOperation extends CheckedOperation("aggregate")
+  case object MergeOperation extends CheckedOperation("aggregate")
   case object AggregateOperation extends CheckedOperation("aggregate")
   case object ReduceOperation extends CheckedOperation("reduce")
 

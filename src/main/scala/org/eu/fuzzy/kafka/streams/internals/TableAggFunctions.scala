@@ -3,16 +3,16 @@ package org.eu.fuzzy.kafka.streams.internals
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.kstream.KGroupedTable
 
-import org.eu.fuzzy.kafka.streams.KTable.Options
 import org.eu.fuzzy.kafka.streams.{KTopic, KTable}
+import org.eu.fuzzy.kafka.streams.KTable.Options
 import org.eu.fuzzy.kafka.streams.functions.ktable.AggregateFunctions
-import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
+import org.eu.fuzzy.kafka.streams.serialization.{ValueSerde, LongValueSerde}
 import org.eu.fuzzy.kafka.streams.error.ErrorHandler
 
 /**
- * Implements an improved wrapper for the re-grouped changelog stream.
+ * Implements an improved wrapper for the grouped changelog stream.
  *
- * @tparam K  a type of record key
+ * @tparam K  a type of primary key
  * @tparam V  a type of record value
  *
  * @param topic  an identity of Kafka topic, always without a public name
@@ -20,7 +20,7 @@ import org.eu.fuzzy.kafka.streams.error.ErrorHandler
  * @param builder  a builder of Kafka Streams topology
  * @param errorHandler  a handler of stream errors
  */
-private[streams] class TableAggFunctions[K, V](val topic: KTopic[K, V],
+private[streams] class TableAggFunctions[K, V](topic: KTopic[K, V],
                                                internalTable: KGroupedTable[K, V],
                                                builder: StreamsBuilder,
                                                errorHandler: ErrorHandler)
@@ -56,12 +56,11 @@ private[streams] class TableAggFunctions[K, V](val topic: KTopic[K, V],
     new TableWrapper(newTopic, newTable, builder, errorHandler)
   }
 
-  def reduce(adder: (V, V) => V, subtractor: (V, V) => V): KTable[K, V] =
+  override def reduce(adder: (V, V) => V, subtractor: (V, V) => V): KTable[K, V] =
     reduce(adder, subtractor, storeOptions(topic.keySerde, topic.valueSerde))
 
   override def count(options: Options[K, Long]) =
-    aggregate(() => 0L,
-              (_, _, counter: Long) => counter + 1,
-              (_, _, counter: Long) => counter - 1,
-              options)
+    aggregate(() => 0L, (_, _, counter) => counter + 1, (_, _, counter) => counter - 1, options)
+
+  override def count() = count(storeOptions(topic.keySerde, LongValueSerde))
 }
