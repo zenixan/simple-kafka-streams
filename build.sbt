@@ -36,7 +36,6 @@ libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % Test
-libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.25" % Test
 
 //
 // Build options

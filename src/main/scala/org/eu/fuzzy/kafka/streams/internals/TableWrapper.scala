@@ -139,9 +139,7 @@ private[streams] final case class TableWrapper[K, V](topic: KTopic[K, V],
 
   override def to(topic: String, options: Produced[K, V]): Unit = toStream.to(topic, options)
 
-  override def groupByKey: AggregateFunctions[K, V] = {
-    ???
-  }
+  override def groupByKey: AggregateFunctions[K, V] = groupBy((key, _) => key)(topic.keySerde)
 
   // format: off
   override def groupBy[KR](mapper: (K, V) => KR)

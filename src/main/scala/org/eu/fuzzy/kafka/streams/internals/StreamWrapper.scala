@@ -201,7 +201,7 @@ private[streams] final case class StreamWrapper[K, V](topic: KTopic[K, V],
       new Predicate[K, V] {
         override def test(key: K, value: V): Boolean =
           Try(predicate(key, value))
-            .recover(errorHandler.handle(topic, BranchOperation, value))
+            .recover(errorHandler.handle(topic, BranchOperation, key, value))
             .get
     })
     internalStream

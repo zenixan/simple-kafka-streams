@@ -21,7 +21,7 @@ object LogErrorHandler {
    *
    * @param name  a name of logger
    */
-  def apply(name: String): ErrorHandler = apply(Logger("kafka.streams." + name))
+  def apply(name: String): ErrorHandler = apply(Logger(name))
 
   /**
    * Returns a handler with the given logger.
@@ -40,6 +40,11 @@ object LogErrorHandler {
       case filterError if (operation == FilterOperation) =>
         val Seq(key, value) = args
         logger.error(s"The filter function is failed for the record <$key:$value>", filterError)
+        false.asInstanceOf[R]
+
+      case branchError if (operation == BranchOperation) =>
+        val Seq(key, value) = args
+        logger.error(s"The branch function is failed for the record <$key:$value>", branchError)
         false.asInstanceOf[R]
 
       case mapError if (operation == MapOperation) =>
