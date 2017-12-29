@@ -13,22 +13,23 @@ class FilterFunctionsSpec extends FlatSpec with Matchers {
   private val TestInputTopic = KTopic[Int, String]("test-input-topic")
   private val TestOutputTopic = KTopic[Int, String]("test-output-topic")
 
-  "filter function" should behave like filteredStream(
+  "filter function" should behave like filterableStream(
     _.filter((key, value) => value.nonEmpty && key > 1),
     _.filter((key, value) => value.nonEmpty && key > 1))
 
-  "filterNot function" should behave like filteredStream(
+  "filterNot function" should behave like filterableStream(
     _.filterNot((key, value) => value.nonEmpty && key == 1),
     _.filterNot((key, value) => value.nonEmpty && key == 1))
 
-  "filterKeys function" should behave like filteredStream(_.filterKeys(key => assertTrue(key == 2)),
-                                                          _.filterKeys(key => assertTrue(key == 2)))
+  "filterKeys function" should behave like filterableStream(
+    _.filterKeys(key => assertTrue(key == 2)),
+    _.filterKeys(key => assertTrue(key == 2)))
 
-  "filterValues function" should behave like filteredStream(
+  "filterValues function" should behave like filterableStream(
     _.filterValues(value => value.nonEmpty && value == "Record 2"),
     _.filterValues(value => value.nonEmpty && value == "Record 2"))
 
-  private def filteredStream(streamOperation: StreamFilter, tableOperation: TableFilter): Unit = {
+  private def filterableStream(streamOperation: StreamFilter, tableOperation: TableFilter): Unit = {
     it should "remove the record from the stream" in {
       val streamTopology = (topology: StreamsBuilder) =>
         streamOperation(KStream(topology, TestInputTopic)).to(TestOutputTopic.name)

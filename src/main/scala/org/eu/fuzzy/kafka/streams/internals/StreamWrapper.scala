@@ -220,12 +220,12 @@ private[streams] final case class StreamWrapper[K, V](topic: KTopic[K, V],
     this.copy(topic, internalStream.merge(stream.internalStream))
 
   override def foreach(action: (K, V) => Unit): Unit = internalStream.foreach { (key, value) =>
-    Try(action(key, value)).recover(errorHandler.handle(topic, ForeachOperation, value)).get
+    Try(action(key, value)).recover(errorHandler.handle(topic, ForeachOperation, key, value)).get
   }
 
   override def peek(action: (K, V) => Unit): KStream[K, V] = {
     val newStream = internalStream.peek { (key, value) =>
-      Try(action(key, value)).recover(errorHandler.handle(topic, PeekOperation, value)).get
+      Try(action(key, value)).recover(errorHandler.handle(topic, PeekOperation, key, value)).get
     }
     this.copy(topic, newStream)
   }
