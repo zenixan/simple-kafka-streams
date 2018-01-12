@@ -3,7 +3,7 @@ package org.eu.fuzzy.kafka.streams.functions.kstream
 import org.apache.kafka.streams.kstream.Windowed
 import org.eu.fuzzy.kafka.streams.KTable
 import org.eu.fuzzy.kafka.streams.KTable.SessionOptions
-import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents a set of aggregation functions with session-based windowing for a record stream.
@@ -70,7 +70,7 @@ trait SessionWindowedFunctions[K, V]
   def aggregate[VR](initializer: () => VR,
                     aggregator: (K, V, VR) => VR,
                     merger: (K, VR, VR) => VR)
-                   (implicit serde: ValueSerde[VR]): KTable[Windowed[K], VR]
+                   (implicit serde: Serde[VR]): KTable[Windowed[K], VR]
   // format: on
 
   /**

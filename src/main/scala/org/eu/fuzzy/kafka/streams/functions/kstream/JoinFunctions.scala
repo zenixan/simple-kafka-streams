@@ -2,119 +2,16 @@ package org.eu.fuzzy.kafka.streams.functions.kstream
 
 import org.apache.kafka.streams.kstream.JoinWindows
 import org.eu.fuzzy.kafka.streams.{KGlobalTable, KTable, KStream}
-import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
- * Represents a set of joining functions for a record stream.
+ * Represents a set of functions to merge a record stream with another stream/table.
  *
  * @tparam K  a type of record key
  * @tparam V  a type of record value
+ * @tparam JK a type of record key in the stream to be joined
  */
-trait JoinFunctions[K, V] {
-
-  /**
-   * Returns a new stream by joining records of this stream with records from the global table using
-   * non-windowed inner join.
-   *
-   * The key-based join is done according to following conditions:
-   *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and
-   *    do not trigger the join.
-   *
-   * <table border='1'>
-   *  <caption>Example</caption>
-   *  <tr>
-   *    <th>Stream</th>
-   *    <th>Table</th>
-   *    <th>State</th>
-   *    <th>Result</th>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:A&gt;</td>
-   *    <td></td>
-   *    <td></td>
-   *    <td></td>
-   *  </tr>
-   *  <tr>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td></td>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:C&gt;</td>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:joiner(C, b)&gt;</td>
-   *  </tr>
-   * </table>
-   *
-   * @tparam GK  a type of record key in the global table
-   * @tparam GV  a type of record value in the global table
-   * @tparam VR  a value type of the result stream
-   *
-   * @param globalTable  a global table to be joined with this stream
-   * @param mapper  a function to map the record of this stream to the key of the global table
-   * @param joiner  a function to compute the join result for a pair of matching records
-   * @param serde  a serialization format for the output record value
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#join]]
-   */
-  // format: off
-  def innerJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV],
-                            mapper: (K, V) => GK,
-                            joiner: (V, GV) => VR)
-                           (implicit serde: ValueSerde[VR]): KStream[K, VR]
-  // format: on
-
-  /**
-   * Returns a new stream by joining records of this stream with records from the table using
-   * non-windowed inner join.
-   *
-   * The key-based join is done according to following conditions:
-   *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and
-   *    do not trigger the join.
-   *
-   * <table border='1'>
-   *  <caption>Example</caption>
-   *  <tr>
-   *    <th>Stream</th>
-   *    <th>Table</th>
-   *    <th>State</th>
-   *    <th>Result</th>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:A&gt;</td>
-   *    <td></td>
-   *    <td></td>
-   *    <td></td>
-   *  </tr>
-   *  <tr>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td></td>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:C&gt;</td>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:joiner(C, b)&gt;</td>
-   *  </tr>
-   * </table>
-   *
-   * @tparam VT  a value type of the table
-   * @tparam VR  a value type of the result stream
-   *
-   * @param table  a table to be joined with this stream
-   * @param joiner  a function to compute the join result for a pair of matching records
-   * @param serde  a serialization format for the output record value
-   */
-  // format: off
-  def innerJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
-                       (implicit serde: ValueSerde[VR]): KStream[K, VR]
-  // format: on
+trait JoinFunctions[K, V, JK] extends TableJoinFunctions[K, V, JK] {
 
   /**
    * Returns a new stream by joining records of this stream with records from the given stream using
@@ -153,125 +50,16 @@ trait JoinFunctions[K, V] {
    * @tparam VR  a value type of the result stream
    *
    * @param otherStream  a stream to be joined with this stream
-   * @param joiner  a function to compute the join result for a pair of matching records
    * @param windows  a sliding window specification
+   * @param joiner  a function to compute the join result for a pair of matching records
    * @param serde  a serialization format for the output record value
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
    */
   // format: off
-  def innerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
-                       (implicit serde: ValueSerde[VR]): KStream[K, VR]
-  // format: on
-
-  /**
-   * Returns a new stream by joining records of this stream with records from the global table using
-   * non-windowed left join.
-   *
-   * The key-based join is done according to following conditions:
-   *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and
-   *    do not trigger the join.
-   *  - For each input record on the left side that does not have any match on the right side,
-   *    the `joiner` function will be called with a `null` value.
-   *
-   * <table border='1'>
-   *  <caption>Example</caption>
-   *  <tr>
-   *    <th>Stream</th>
-   *    <th>Global Table</th>
-   *    <th>State</th>
-   *    <th>Result</th>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:A&gt;</td>
-   *    <td></td>
-   *    <td></td>
-   *    <td>&lt;K1:joiner(A, null)&gt;</td>
-   *  </tr>
-   *  <tr>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td></td>
-   *   </tr>
-   *  <tr>
-   *    <td>&lt;K1:C&gt;</td>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:joiner(C, b)&gt;</td>
-   *  </tr>
-   * </table>
-   *
-   * @tparam GK  a type of record key in the global table
-   * @tparam GV  a type of record value in the global table
-   * @tparam VR  a value type of the result stream
-   *
-   * @param globalTable  a global table to be joined with this stream
-   * @param mapper  a function to map the record of this stream to the key of the global table
-   * @param joiner  a function to compute the join result for a pair of matching records
-   * @param serde  a serialization format for the output record value
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#leftJoin]]
-   */
-  // format: off
-  def leftJoin[GK, GV, VR](globalTable: KGlobalTable[GK, GV],
-                           mapper: (K, V) => GK,
-                           joiner: (V, GV) => VR)
-                          (implicit serde: ValueSerde[VR]): KStream[K, VR]
-  // format: on
-
-  /**
-   * Returns a new stream by joining records of this stream with records from the table using
-   * non-windowed left join.
-   *
-   * The key-based join is done according to following conditions:
-   *  - Only input records for the stream triggers the join.
-   *  - Input records for the stream with a `null` key or a `null` value are ignored and
-   *    do not trigger the join.
-   *  - For each input record on the left side that does not have any match on the right side,
-   *    the `joiner` function will be called with a `null` value.
-   *
-   * <table border='1'>
-   *  <caption>Example</caption>
-   *  <tr>
-   *    <th>Stream</th>
-   *    <th>Table</th>
-   *    <th>State</th>
-   *    <th>Result</th>
-   *  </tr>
-   *  <tr>
-   *    <td>&lt;K1:A&gt;</td>
-   *    <td></td>
-   *    <td></td>
-   *    <td>&lt;K1:joiner(A, null)&gt;</td>
-   *  </tr>
-   *  <tr>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td></td>
-   *   </tr>
-   *  <tr>
-   *    <td>&lt;K1:C&gt;</td>
-   *    <td></td>
-   *    <td>&lt;K1:b&gt;</td>
-   *    <td>&lt;K1:joiner(C, b)&gt;</td>
-   *  </tr>
-   * </table>
-   *
-   * @tparam VT  a value type of the table
-   * @tparam VR  a value type of the result stream
-   *
-   * @param table  a table to be joined with this stream
-   * @param joiner  a function to compute the join result for a pair of matching records
-   * @param serde  a serialization format for the output record value
-   *
-   * @see [[org.apache.kafka.streams.kstream.KStream#leftJoin]]
-   */
-  // format: off
-  def leftJoin[VT, VR](table: KTable[K, VT], joiner: (V, VT) => VR)
-                      (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  def innerJoin[VO, VR](otherStream: KStream[JK, VO], windows: JoinWindows)
+                       (joiner: (V, VO) => VR)
+                       (implicit serde: Serde[VR]): KStream[K, VR]
   // format: on
 
   /**
@@ -313,15 +101,16 @@ trait JoinFunctions[K, V] {
    * @tparam VR  a value type of the result stream
    *
    * @param otherStream  a stream to be joined with this stream
-   * @param joiner  a function to compute the join result for a pair of matching records
    * @param windows  a sliding window specification
+   * @param joiner  a function to compute the join result for a pair of matching records
    * @param serde  a serialization format for the output record value
    *
    * @see [[org.apache.kafka.streams.kstream.KStream#join]]
    */
   // format: off
-  def lefJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
-                     (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  def lefJoin[VO, VR](otherStream: KStream[JK, VO], windows: JoinWindows)
+                     (joiner: (V, Option[VO]) => VR)
+                     (implicit serde: Serde[VR]): KStream[K, VR]
   // format: on
 
   /**
@@ -363,12 +152,13 @@ trait JoinFunctions[K, V] {
    * @tparam VR  a value type of the result stream
    *
    * @param otherStream  a stream to be joined with this stream
-   * @param joiner  a function to compute the join result for a pair of matching records
    * @param windows  a sliding window specification
+   * @param joiner  a function to compute the join result for a pair of matching records
    * @param serde  a serialization format for the output record value
    */
   // format: off
-  def outerJoin[VO, VR](otherStream: KStream[K, VO], joiner: (V, VO) => VR, windows: JoinWindows)
-                       (implicit serde: ValueSerde[VR]): KStream[K, VR]
+  def fullJoin[VO, VR](otherStream: KStream[JK, VO], windows: JoinWindows)
+                      (joiner: (Option[V], Option[VO]) => VR)
+                      (implicit serde: Serde[VR]): KStream[K, VR]
   // format: on
 }

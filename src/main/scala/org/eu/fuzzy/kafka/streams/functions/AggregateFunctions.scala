@@ -23,6 +23,9 @@ trait AggregateFunctions[K, KR, V, O[_ <: K, _]] {
    *  - Input records with null keys are ignored for the changelog streams.
    *    Records with `null` values are not ignored but interpreted as '''tombstones'''
    *    for the corresponding key, which indicate the deletion of the key from the table.
+   *
+   * @see [[org.apache.kafka.streams.kstream.KGroupedStream#count]]
+   * @see [[org.apache.kafka.streams.kstream.KGroupedTable#count]]
    */
   def count(): KTable[KR, Long]
 

@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams.functions.kstream
 
 import org.apache.kafka.streams.kstream.{Window, Windows, SessionWindows}
-import org.eu.fuzzy.kafka.streams.serialization.KeySerde
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents a set of functions to group the records of record stream.
@@ -28,7 +28,7 @@ trait GroupFunctions[K, V]
    */
   // format: off
   def windowedBy[KR, W <: Window](mapper: (K, V) => KR, windows: Windows[W])
-                                 (implicit serde: KeySerde[KR]): TimeWindowedFunctions[KR, V]
+                                 (implicit serde: Serde[KR]): TimeWindowedFunctions[KR, V]
   // format: on
 
   /**
@@ -47,6 +47,6 @@ trait GroupFunctions[K, V]
    */
   // format: off
   def windowedBy[KR](mapper: (K, V) => KR, windows: SessionWindows)
-                    (implicit serde: KeySerde[KR]): SessionWindowedFunctions[KR, V]
+                    (implicit serde: Serde[KR]): SessionWindowedFunctions[KR, V]
   // format: on
 }

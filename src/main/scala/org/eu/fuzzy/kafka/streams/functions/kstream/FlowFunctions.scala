@@ -3,12 +3,13 @@ package org.eu.fuzzy.kafka.streams.functions.kstream
 import org.eu.fuzzy.kafka.streams.KStream
 
 /**
- * Represents a set of control flow functions for a record stream.
+ * Represents a set of flow transformation functions for a record stream.
  *
  * @tparam K  a type of record key
  * @tparam V  a type of record value
  */
 trait FlowFunctions[K, V] {
+
   /**
    * Returns a list of streams from this stream by branching the records in the original stream based on
    * the supplied predicates.

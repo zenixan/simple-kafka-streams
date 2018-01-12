@@ -1,39 +1,29 @@
 package org.eu.fuzzy.kafka.streams
 
-import scala.reflect.ClassTag
-import org.apache.kafka.common.serialization._
+import scala.reflect.runtime.universe.TypeTag
+import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
+import org.apache.kafka.streams.kstream.Windowed
 import org.eu.fuzzy.kafka.streams.support.JsonSerde
 
 /**
  * Provides a set of default serializers/deserializers for keys and values.
  */
 package object serialization {
-  implicit val IntKeySerde: KeySerde[Int] =
-    KeySerde(Serializers.IntSerializer, Deserializers.IntDeserializer)
-  implicit val LongKeySerde: KeySerde[Long] =
-    KeySerde(Serializers.LongSerializer, Deserializers.LongDeserializer)
-  implicit val FloatKeySerde: KeySerde[Float] =
-    KeySerde(Serializers.FloatSerializer, Deserializers.FloatDeserializer)
-  implicit val DoubleKeySerde: KeySerde[Double] =
-    KeySerde(Serializers.DoubleSerializer, Deserializers.DoubleDeserializer)
-  implicit val StringKeySerde: KeySerde[String] =
-    KeySerde(new StringSerializer, new StringDeserializer)
-  implicit val BytesKeySerde: KeySerde[Array[Byte]] =
-    KeySerde(new ByteArraySerializer, new ByteArrayDeserializer)
+  implicit val IntSerde: Serde[Int] =
+    Serde(Serializers.IntSerializer, Deserializers.IntDeserializer)
+  implicit val LongSerde: Serde[Long] =
+    Serde(Serializers.LongSerializer, Deserializers.LongDeserializer)
+  implicit val FloatSerde: Serde[Float] =
+    Serde(Serializers.FloatSerializer, Deserializers.FloatDeserializer)
+  implicit val DoubleSerde: Serde[Double] =
+    Serde(Serializers.DoubleSerializer, Deserializers.DoubleDeserializer)
+  implicit val StringSerde: Serde[String] =
+    Serde(new StringSerializer, new StringDeserializer)
+  implicit val BytesSerde: Serde[Array[Byte]] =
+    Serde(new ByteArraySerializer, new ByteArrayDeserializer)
 
-  implicit val IntValueSerde: ValueSerde[Int] =
-    ValueSerde(Serializers.IntSerializer, Deserializers.IntDeserializer)
-  implicit val LongValueSerde: ValueSerde[Long] =
-    ValueSerde(Serializers.LongSerializer, Deserializers.LongDeserializer)
-  implicit val FloatValueSerde: ValueSerde[Float] =
-    ValueSerde(Serializers.FloatSerializer, Deserializers.FloatDeserializer)
-  implicit val DoubleValueSerde: ValueSerde[Double] =
-    ValueSerde(Serializers.DoubleSerializer, Deserializers.DoubleDeserializer)
-  implicit val StringValueSerde: ValueSerde[String] =
-    ValueSerde(new StringSerializer, new StringDeserializer)
-  implicit val BytesValueSerde: ValueSerde[Array[Byte]] =
-    ValueSerde(new ByteArraySerializer, new ByteArrayDeserializer)
-
-  implicit def JsonValueSerde[T](implicit classTag: ClassTag[T]): ValueSerde[T] =
-    ValueSerde(JsonSerde(classTag))
+  implicit def WindowedSerde[T](implicit serde: Serde[T]): Serde[Windowed[T]] =
+    WindowedKeySerde(serde)
+  implicit def JsonValueSerde[T: TypeTag]: Serde[T] = JsonSerde[T]
 }

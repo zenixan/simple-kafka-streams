@@ -16,7 +16,7 @@ trait TransformFunctions[K, V]
    * @param mapper  a function to compute a new value for each record
    * @param options  a set of options to use when materializing to the local state store
    */
-  def mapKeys[KR](mapper: K => KR, options: Options[KR, V]): KTable[KR, V]
+  def mapKeys[KR](mapper: (K, V) => KR, options: Options[KR, V]): KTable[KR, V]
 
   /**
    * Returns a new stream with a new value for each input record.

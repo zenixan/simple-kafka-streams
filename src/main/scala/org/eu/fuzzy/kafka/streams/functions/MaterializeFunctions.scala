@@ -15,8 +15,8 @@ trait MaterializeFunctions[K, V] {
    * Returns a Kafka topic for this stream.
    *
    * @note The name of topic is absent for the streams which are created by any intermediate operations,
-   *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
-   *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map()]], etc.
+   *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter(* filter]],
+   *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map[KR,VR]* map], etc.
    */
   def topic: KTopic[K, V]
 
@@ -26,7 +26,7 @@ trait MaterializeFunctions[K, V] {
    * @param topic  a name of topic to write
    */
   def to(topic: String): Unit =
-    to(topic, Produced.`with`(this.topic.keySerde, this.topic.valueSerde))
+    to(topic, Produced.`with`(this.topic.keySerde, this.topic.valSerde))
 
   /**
    * Materializes this stream to a topic.

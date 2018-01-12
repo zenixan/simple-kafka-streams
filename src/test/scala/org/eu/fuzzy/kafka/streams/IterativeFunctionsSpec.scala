@@ -13,7 +13,9 @@ class IterativeFunctionsSpec extends FlatSpec with Matchers {
   "peek function" should "execute an action for each record in the stream" in {
     val buffer = Buffer[String]()
     val streamTopology = (topology: StreamsBuilder) =>
-      KStream(topology, TestInputTopic).peek((_, value) => buffer.append(value.toString)).to(TestOutputTopic.name)
+      KStream(topology, TestInputTopic)
+        .peek((_, value) => buffer.append(value.toString))
+        .to(TestOutputTopic.name)
     val records = KMockBuilder(streamTopology)
       .input(TestInputTopic, (1, "Record 1"))
       .input(TestInputTopic, (2, null))

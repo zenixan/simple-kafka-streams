@@ -52,7 +52,7 @@ object KMockBuilder {
                      record._1,
                      record._2,
                      topic.keySerde.serializer,
-                     topic.valueSerde.serializer)
+                     topic.valSerde.serializer)
       this
     }
 
@@ -82,7 +82,7 @@ object KMockBuilder {
       @tailrec
       def read(records: Seq[(K, V)]): Seq[(K, V)] = {
         val record =
-          driver.readOutput(topic.name, topic.keySerde.deserializer, topic.valueSerde.deserializer)
+          driver.readOutput(topic.name, topic.keySerde.deserializer, topic.valSerde.deserializer)
         if (record == null) records else read(records :+ (record.key(), record.value()))
       }
       read(Nil)

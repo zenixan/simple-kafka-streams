@@ -3,7 +3,7 @@ package org.eu.fuzzy.kafka.streams.functions.ktable
 import scala.language.higherKinds
 import org.eu.fuzzy.kafka.streams.KTable
 import org.eu.fuzzy.kafka.streams.KTable.Options
-import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents a set of aggregation functions for a changelog stream.
@@ -61,7 +61,7 @@ trait AggregateFunctions[K, V]
    */
   // format: off
   def aggregate[VR](initializer: () => VR, adder: (K, V, VR) => VR, subtractor: (K, V, VR) => VR)
-                   (implicit serde: ValueSerde[VR]): KTable[K, VR]
+                   (implicit serde: Serde[VR]): KTable[K, VR]
   // format: on
 
   /**

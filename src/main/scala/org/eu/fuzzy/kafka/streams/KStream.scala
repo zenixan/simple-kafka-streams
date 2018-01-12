@@ -1,16 +1,13 @@
 package org.eu.fuzzy.kafka.streams
 
 import scala.util.Try
-import java.util.Collections.singletonList
 
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.{Consumed, StreamsBuilder}
 import org.apache.kafka.streams.kstream.{KStream => KafkaStream}
 
-import org.eu.fuzzy.kafka.streams.functions.{kstream, FilterFunctions}
+import org.eu.fuzzy.kafka.streams.functions.{kstream, FilterFunctions, JoinFunctions}
 import org.eu.fuzzy.kafka.streams.internals.StreamWrapper
-import org.eu.fuzzy.kafka.streams.error.ErrorHandler
-import org.eu.fuzzy.kafka.streams.error.CheckedOperation.DeserializeOperation
 import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
 
 /**
@@ -31,7 +28,7 @@ trait KStream[K, V]
     with kstream.TransformFunctions[K, V]
     with kstream.FlowFunctions[K, V]
     with kstream.IterativeFunctions[K, V]
-    with kstream.JoinFunctions[K, V]
+    with JoinFunctions[K, V, kstream.JoinFunctions, kstream.TableJoinFunctions]
     with kstream.GroupFunctions[K, V]
 
 /**
@@ -47,7 +44,7 @@ object KStream {
   /**
    * Creates a stream for the given topic.
    *
-   * [[org.eu.fuzzy.kafka.streams.support.LogErrorHandler]] will be used as the default error handler.
+   * [[org.eu.fuzzy.kafka.streams.support.LogErrorHandler LogErrorHandler]] will be used as the default error handler.
    *
    * @tparam K  a type of record key
    * @tparam V  a type of record value
@@ -71,16 +68,16 @@ object KStream {
   def apply[K, V](builder: StreamsBuilder,
                   topic: KTopic[K, V],
                   handler: ErrorHandler): KStream[K, V] = {
-    val deserializer = topic.valueSerde.deserializer
+    val deserializer = topic.valSerde.deserializer
     val stream: KafkaStream[K, V] = builder
       .stream(topic.name, Consumed.`with`(topic.keySerde, Serdes.ByteArray))
       .filter { (key, value) =>
         Try(deserializer.deserialize(topic.name, value))
           .map(_ => true)
-          .recover(handler.handle(topic, DeserializeOperation, key, value))
+          .recover { case error => handler.onDeserializeError(error, topic, key, value); false }
           .get
       }
-      .flatMapValues(value => singletonList(deserializer.deserialize(topic.name, value)))
+      .mapValues(deserializer.deserialize(topic.name, _))
     StreamWrapper(topic, stream, builder, handler)
   }
 
@@ -95,9 +92,9 @@ object KStream {
     /**
      * Returns a Kafka topic for this stream.
      *
-     * @note The name of topic is absent for the streams which are created by any intermediate operations, e.g.
-     *       [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
-     *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map()]], etc.
+     * @note The name of topic is absent for the streams which are created by any intermediate operations,
+     *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter(* filter]],
+     *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map[KR,VR]* map]], etc.
      */
     def topic: KTopic[K, V]
 

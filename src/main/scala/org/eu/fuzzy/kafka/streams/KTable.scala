@@ -2,20 +2,30 @@ package org.eu.fuzzy.kafka.streams
 
 import org.apache.kafka.common.utils.Bytes
 import org.apache.kafka.streams.StreamsBuilder
-import org.apache.kafka.streams.kstream.{Materialized, KTable => KafkaTable}
+import org.apache.kafka.streams.kstream.{KTable => KafkaTable}
 import org.apache.kafka.streams.state.{KeyValueStore, SessionStore, WindowStore}
 
-import org.eu.fuzzy.kafka.streams.functions.{ktable, IterativeFunctions, MaterializeFunctions}
-import org.eu.fuzzy.kafka.streams.functions.ktable.GroupFunctions
-import org.eu.fuzzy.kafka.streams.internals.storeOptions
-import org.eu.fuzzy.kafka.streams.error.ErrorHandler
+import org.eu.fuzzy.kafka.streams.state.{StoreOptions, recordStoreOptions}
 import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
+import org.eu.fuzzy.kafka.streams.functions.{
+  JoinFunctions,
+  IterativeFunctions,
+  MaterializeFunctions
+}
+import org.eu.fuzzy.kafka.streams.functions.ktable.{
+  FilterFunctions,
+  TransformFunctions,
+  GroupFunctions,
+  BasicJoinFunctions,
+  JoinFunctions => TableJoinFunctions
+}
+import org.eu.fuzzy.kafka.streams.internals.getStateStoreName
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table with a set of table operations.
- *
  * Each record in this changelog stream is an update on the primary-keyed table with the record key as the primary key.
- * Records from the source topic that have null keys are dropped.
+ *
+ * @note Records from the source topic that have null keys are dropped.
  *
  * @tparam K  a type of primary key
  * @tparam V  a type of value
@@ -24,18 +34,18 @@ import org.eu.fuzzy.kafka.streams.support.LogErrorHandler
  */
 trait KTable[K, V]
     extends KTable.Wrapper[K, V]
-    with ktable.FilterFunctions[K, V]
+    with FilterFunctions[K, V]
     with MaterializeFunctions[K, V]
-    with ktable.TransformFunctions[K, V]
+    with TransformFunctions[K, V]
     with IterativeFunctions[K, V]
-    with ktable.JoinFunctions[K, V]
+    with JoinFunctions[K, V, TableJoinFunctions, BasicJoinFunctions]
     with GroupFunctions[K, V]
 
 /**
  * Represents an abstraction of a changelog stream from a primary-keyed table.
- *
  * Each record in this changelog stream is an update on the primary-keyed table with the record key as the primary key.
- * Records from the source topic that have null keys are dropped.
+ *
+ * @note Records from the source topic that have null keys are dropped.
  *
  * @see [[org.apache.kafka.streams.kstream.KTable]]
  */
@@ -47,7 +57,7 @@ object KTable {
    * @tparam K  a type of primary key
    * @tparam V  a type of record value
    */
-  type Options[K, V] = Materialized[K, V, KeyValueStore[Bytes, Array[Byte]]]
+  type Options[K, V] = StoreOptions[K, V, KeyValueStore[Bytes, Array[Byte]]]
 
   /**
    * Represents a set of options for storing the windowed aggregated values to the local state store.
@@ -55,7 +65,7 @@ object KTable {
    * @tparam K  a type of primary key
    * @tparam V  a type of record value
    */
-  type WindowOptions[K, V] = Materialized[K, V, WindowStore[Bytes, Array[Byte]]]
+  type WindowOptions[K, V] = StoreOptions[K, V, WindowStore[Bytes, Array[Byte]]]
 
   /**
    * Represents a set of options for storing the aggregated values of sessions to the local state store.
@@ -63,12 +73,12 @@ object KTable {
    * @tparam K  a type of primary key
    * @tparam V  a type of record value
    */
-  type SessionOptions[K, V] = Materialized[K, V, SessionStore[Bytes, Array[Byte]]]
+  type SessionOptions[K, V] = StoreOptions[K, V, SessionStore[Bytes, Array[Byte]]]
 
   /**
    * Creates a table for the given topic.
    *
-   * [[org.eu.fuzzy.kafka.streams.support.LogErrorHandler]] will be used as the default error handler.
+   * [[org.eu.fuzzy.kafka.streams.support.LogErrorHandler LogErrorHandler]] will be used as the default error handler.
    *
    * @tparam K  a type of primary key
    * @tparam V  a type of record value
@@ -91,8 +101,10 @@ object KTable {
    */
   def apply[K, V](builder: StreamsBuilder,
                   topic: KTopic[K, V],
-                  handler: ErrorHandler): KTable[K, V] =
-    apply(builder, topic, storeOptions(topic.keySerde, topic.valueSerde), handler)
+                  handler: ErrorHandler): KTable[K, V] = {
+    val stateStore = recordStoreOptions(getStateStoreName, topic.keySerde, topic.valSerde)
+    apply(builder, topic, stateStore, handler)
+  }
 
   /**
    * Creates a table for the given topic.
@@ -108,10 +120,8 @@ object KTable {
   def apply[K, V](builder: StreamsBuilder,
                   topic: KTopic[K, V],
                   options: Options[K, V],
-                  handler: ErrorHandler): KTable[K, V] = {
-    val materialized = options.withKeySerde(topic.keySerde).withValueSerde(topic.valueSerde)
-    KStream(builder, topic, handler).groupByKey.reduce((_, newValue) => newValue, materialized)
-  }
+                  handler: ErrorHandler): KTable[K, V] =
+    KStream(builder, topic, handler).groupByKey.reduce((_, newValue) => newValue, options)
 
   /**
    * Represents a wrapper for the changelog stream.
@@ -122,11 +132,11 @@ object KTable {
   trait Wrapper[K, V] {
 
     /**
-     * Returns a Kafka topic for this stream.
+     * Returns a Kafka topic for this table.
      *
-     * @note The name of topic is absent for the streams which are created by any intermediate operations, e.g.
-     *       [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter()]],
-     *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map()]], etc.
+     * @note The name of topic is absent for the streams which are created by any intermediate operations,
+     *       e.g. [[org.eu.fuzzy.kafka.streams.functions.FilterFunctions.filter(* filter]],
+     *       [[org.eu.fuzzy.kafka.streams.functions.TransformFunctions.map[KR,VR]* map]], etc.
      */
     def topic: KTopic[K, V]
 

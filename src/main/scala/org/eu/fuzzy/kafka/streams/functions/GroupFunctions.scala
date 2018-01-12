@@ -2,7 +2,7 @@ package org.eu.fuzzy.kafka.streams.functions
 
 import scala.language.higherKinds
 import org.eu.fuzzy.kafka.streams.KTable.Options
-import org.eu.fuzzy.kafka.streams.serialization.KeySerde
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents a set of functions to group the records of record/changelog stream.
@@ -33,6 +33,6 @@ trait GroupFunctions[K, V, S[_, _, _, _]] {
    * @see [[org.apache.kafka.streams.kstream.KStream#groupBy]]
    * @see [[org.apache.kafka.streams.kstream.KTable#groupBy]]
    */
-  def groupBy[KR](mapper: (K, V) => KR)(implicit serde: KeySerde[KR]): S[KR, KR, V, Options[KR, V]]
+  def groupBy[KR](mapper: (K, V) => KR)(implicit serde: Serde[KR]): S[KR, KR, V, Options[KR, V]]
 
 }

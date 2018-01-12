@@ -2,7 +2,8 @@ package org.eu.fuzzy.kafka.streams.functions.kstream
 
 import scala.language.higherKinds
 import org.eu.fuzzy.kafka.streams.KTable
-import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
+import org.eu.fuzzy.kafka.streams.DocDummy
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents a set of aggregation functions for a record stream.
@@ -32,7 +33,7 @@ import org.eu.fuzzy.kafka.streams.serialization.ValueSerde
  *    value is received.
  */
 trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
-    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, KR, V, O] {
+    extends org.eu.fuzzy.kafka.streams.functions.AggregateFunctions[K, KR, V, O] with DocDummy {
 
   /**
    * $aggregateDesc
@@ -45,7 +46,7 @@ trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
    */
   // format: off
   def aggregate[VR](initializer: () => VR, aggregator: (K, V, VR) => VR)
-                   (implicit serde: ValueSerde[VR]): KTable[KR, VR]
+                   (implicit serde: Serde[VR]): KTable[KR, VR]
   // format: on
 
   /**
@@ -68,7 +69,7 @@ trait AggregateFunctions[K, KR, V, O[_ <: K, _]]
    *
    * @param reducer  a function to combine the values of records
    *
-   * @see [[org.apache.kafka.streams.kstream.KGroupedStream#reduce]]
+   * @see [[$kafkaApiMapping/kstream/KGroupedStream.html#reduce-org.apache.kafka.streams.kstream.Reducer- reduce javadoc]]
    */
   def reduce(reducer: (V, V) => V): KTable[KR, V]
 

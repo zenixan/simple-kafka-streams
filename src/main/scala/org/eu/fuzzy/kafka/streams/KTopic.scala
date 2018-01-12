@@ -1,7 +1,7 @@
 package org.eu.fuzzy.kafka.streams
 
 import java.util.Objects.requireNonNull
-import serialization.{KeySerde, ValueSerde}
+import org.eu.fuzzy.kafka.streams.serialization.Serde
 
 /**
  * Represents an identity of Kafka topic.
@@ -21,10 +21,10 @@ sealed trait KTopic[K, V] {
   def isAnonymous: Boolean
 
   /** Returns a serialization format for the record key. */
-  def keySerde: KeySerde[K]
+  def keySerde: Serde[K]
 
   /** Returns a serialization format for the record value. */
-  def valueSerde: ValueSerde[V]
+  def valSerde: Serde[V]
 }
 
 object KTopic {
@@ -37,14 +37,14 @@ object KTopic {
    *
    * @param name  a name of topic
    * @param keySerde  a serialization format for the record key
-   * @param valueSerde  a serialization format for the record value
+   * @param valSerde  a serialization format for the record value
    */
-  def apply[K, V](name: String)(implicit keySerde: KeySerde[K],
-                                valueSerde: ValueSerde[V]): KNamedTopic[K, V] = {
+  def apply[K, V](name: String)(implicit keySerde: Serde[K],
+                                valSerde: Serde[V]): KNamedTopic[K, V] = {
     require(name.nonEmpty, "name cannot be empty")
     requireNonNull(keySerde, "A serialization format for the record key cannot be null")
-    requireNonNull(valueSerde, "A serialization format for the record value cannot be null")
-    KNamedTopic(name, keySerde, valueSerde)
+    requireNonNull(valSerde, "A serialization format for the record value cannot be null")
+    KNamedTopic(name, keySerde, valSerde)
   }
 
   /**
@@ -54,14 +54,12 @@ object KTopic {
    * @tparam V  a type of record value
    *
    * @param keySerde  a serialization format for the record key
-   * @param valueSerde  a serialization format for the record value
+   * @param valSerde  a serialization format for the record value
    */
-  def apply[K, V](implicit
-                  keySerde: KeySerde[K],
-                  valueSerde: ValueSerde[V]): KAnonymousTopic[K, V] = {
+  def apply[K, V](implicit keySerde: Serde[K], valSerde: Serde[V]): KAnonymousTopic[K, V] = {
     requireNonNull(keySerde, "A serialization format for the record key cannot be null")
-    requireNonNull(valueSerde, "A serialization format for the record value cannot be null")
-    KAnonymousTopic(keySerde, valueSerde)
+    requireNonNull(valSerde, "A serialization format for the record value cannot be null")
+    KAnonymousTopic(keySerde, valSerde)
   }
 }
 
@@ -72,9 +70,9 @@ object KTopic {
  * @tparam V  a type of record value
  *
  * @param keySerde  a serialization format for the record key
- * @param valueSerde  a serialization format for the record value
+ * @param valSerde  a serialization format for the record value
  */
-final case class KAnonymousTopic[K, V] private (keySerde: KeySerde[K], valueSerde: ValueSerde[V])
+final case class KAnonymousTopic[K, V] private (keySerde: Serde[K], valSerde: Serde[V])
     extends KTopic[K, V] {
   override def name: String =
     throw new UnsupportedOperationException("Anonymous topic doesn't have a public name")
@@ -89,11 +87,9 @@ final case class KAnonymousTopic[K, V] private (keySerde: KeySerde[K], valueSerd
  *
  * @param name  a name of topic
  * @param keySerde  a serialization format for the record key
- * @param valueSerde  a serialization format for the record value
+ * @param valSerde  a serialization format for the record value
  */
-final case class KNamedTopic[K, V] private (name: String,
-                                            keySerde: KeySerde[K],
-                                            valueSerde: ValueSerde[V])
+final case class KNamedTopic[K, V] private (name: String, keySerde: Serde[K], valSerde: Serde[V])
     extends KTopic[K, V] {
   override def isAnonymous: Boolean = false
 }

@@ -1,98 +1,99 @@
 package org.eu.fuzzy.kafka.streams
 
 import scala.util.Try
+import scala.util.Random
 
-import org.apache.kafka.common.utils.Bytes
-import org.apache.kafka.streams.kstream.{KeyValueMapper, ValueJoiner, Windowed}
-import org.apache.kafka.streams.kstream.{Aggregator, Initializer, Materialized, Reducer}
-import org.apache.kafka.streams.processor.StateStore
-import org.apache.kafka.streams.state.KeyValueStore
+import org.apache.kafka.streams.kstream.{Predicate, KeyValueMapper, ValueJoiner}
+import org.apache.kafka.streams.kstream.{Initializer, Aggregator, Reducer, Windowed}
 
-import org.eu.fuzzy.kafka.streams.error.ErrorHandler
-import org.eu.fuzzy.kafka.streams.serialization.{KeySerde, WindowedKeySerde, ValueSerde}
+import org.eu.fuzzy.kafka.streams.serialization.WindowedKeySerde
+import org.eu.fuzzy.kafka.streams.state.StoreOptions
 
 package object internals {
 
-  import org.eu.fuzzy.kafka.streams.error.CheckedOperation._
+  /** Wraps a predicate by the given error handler.  */
+  private[streams] implicit class RichPredicate[K, V](f: (K, V) => Boolean) {
+    @inline def asPredicate(topic: KTopic[K, V], handler: ErrorHandler): Predicate[K, V] =
+      (key, value) =>
+        Try(f(key, value)).recover { case error => handler.onFilterError(error, topic, key, value) }.get
+  }
 
+  /** Wraps a key-mapper function by the given error handler.  */
   private[streams] implicit class RichKeyMapper[K, V, KR](f: (K, V) => KR) {
-
-    /** Wraps a key-mapper function by the given error handler.  */
     @inline def asKeyMapper(topic: KTopic[K, V], handler: ErrorHandler): KeyValueMapper[K, V, KR] =
       (key, value) =>
-        Try(f(key, value))
-          .recover(handler.handle(topic, MapOperation, key, value))
-          .get
+        Try(f(key, value)).recover { case error => handler.onGroupError(error, topic, key, value) }.get
   }
 
-  private[streams] implicit class RichJoiner[V, VO, VR](f: (V, VO) => VR) {
-
-    /** Wraps an inner joiner function by the given error handler. */
-    @inline def asInnerJoiner[K](topic: KTopic[K, V],
+  /** Wraps an inner joiner function by the given error handler. */
+  private[streams] implicit class RichInnerJoiner[V, VO, VR](f: (V, VO) => VR) {
+    @inline def asInnerJoiner[K](topic1: KTopic[_, V],
+                                 topic2: KTopic[_, VO],
                                  handler: ErrorHandler): ValueJoiner[V, VO, VR] =
       (value1, value2) =>
-        Try(f(value1, value2))
-          .recover(handler.handle(topic, InnerJoinOperation, value1, value2))
-          .get
+        Try(f(value1, value2)).recover {
+          case error => handler.onInnerJoinError(error, topic1, topic2, value1, value2)
+        }.get
+  }
 
-    /** Wraps a left joiner function by the given error handler. */
-    @inline def asLeftJoiner[K](topic: KTopic[K, V],
+  /** Wraps a left joiner function by the given error handler. */
+  private[streams] implicit class RichLeftJoiner[V, VO, VR](f: (V, Option[VO]) => VR) {
+    @inline def asLeftJoiner[K](topic1: KTopic[_, V],
+                                topic2: KTopic[_, VO],
                                 handler: ErrorHandler): ValueJoiner[V, VO, VR] =
       (value1, value2) =>
-        Try(f(value1, value2)).recover(handler.handle(topic, LeftJoinOperation, value1, value2)).get
+        Try(f(value1, Some(value2))).recover {
+          case error => handler.onLeftJoinError(error, topic1, topic2, value1, value2)
+        }.get
+  }
 
-    /** Wraps an outer joiner function by the given error handler. */
-    @inline def asOuterJoiner[K](topic: KTopic[K, V],
-                                 handler: ErrorHandler): ValueJoiner[V, VO, VR] =
+  /** Wraps a left joiner function by the given error handler. */
+  private[streams] implicit class RichFullJoiner[V, VO, VR](f: (Option[V], Option[VO]) => VR) {
+    @inline def asFullJoiner[K](topic1: KTopic[_, V],
+                                topic2: KTopic[_, VO],
+                                handler: ErrorHandler): ValueJoiner[V, VO, VR] =
       (value1, value2) =>
-        Try(f(value1, value2))
-          .recover(handler.handle(topic, OuterJoinOperation, value1, value2))
-          .get
+        Try(f(Some(value1), Some(value2))).recover {
+          case error => handler.onFullJoinError(error, topic1, topic2, value1, value2)
+        }.get
   }
 
+  /** Wraps an aggregate supplier by the given error handler. */
   private[streams] implicit class RichInitializer[VR](f: () => VR) {
-
-    /** Wraps an aggregate supplier by the given error handler. */
     @inline def asInitializer[K, V](topic: KTopic[K, V], handler: ErrorHandler): Initializer[VR] =
-      () => Try(f()).recover(handler.handle(topic, InitializerOperation)).get
+      () =>
+        Try(f()).recover {
+          case error => handler.onInitializeError(error, topic)
+        }.get
   }
 
-  private[streams] implicit class RichReducer[V](f: (V, V) => V) {
-
-    /** Wraps a reducer function by the given error handler. */
-    @inline def asReducer[K](topic: KTopic[K, V], handler: ErrorHandler): Reducer[V] =
-      (aggregate, value) =>
-        Try(f(aggregate, value))
-          .recover(handler.handle(topic, ReduceOperation, aggregate, value))
-          .get
-  }
-
+  /** Wraps an aggregate function by the given error handler. */
   private[streams] implicit class RichAggregator[K, V, VR](f: (K, V, VR) => VR) {
-
-    /** Wraps an aggregate function by the given error handler. */
     @inline def asAggregator(topic: KTopic[K, V], handler: ErrorHandler): Aggregator[K, V, VR] =
       (key, value, aggregate) =>
-        Try(f(key, value, aggregate))
-          .recover(handler.handle(topic, AggregateOperation, key, value, aggregate))
-          .get
+        Try(f(key, value, aggregate)).recover {
+          case error => handler.onAggregateError(error, topic, key, value, aggregate)
+        }.get
   }
 
-  /** Returns an anonymous topic for the given materializing options. */
-  @inline private[streams] def toTopic[K, V](
-      options: Materialized[K, V, _ <: StateStore]): KTopic[K, V] = {
-    val materialized = new InternalMaterialized(options)
-    KTopic(materialized.keySerde, materialized.valueSerde)
+  /** Wraps a reducer function by the given error handler. */
+  private[streams] implicit class RichReducer[V](f: (V, V) => V) {
+    @inline def asReducer[K](topic: KTopic[K, V], handler: ErrorHandler): Reducer[V] =
+      (aggregate, value) =>
+        Try(f(aggregate, value)).recover {
+          case error => handler.onReduceError(error, topic, aggregate, value)
+        }.get
   }
+
+  /** Returns a tombstone record according to the given type. */
+  @inline private[streams] def tombstone[T]: T = null.asInstanceOf[T]
 
   /** Returns an anonymous windowed topic for the given materializing options. */
   @inline private[streams] def toWindowedTopic[K, V](
-      options: Materialized[K, V, _ <: StateStore]): KTopic[Windowed[K], V] = {
-    val materialized = new InternalMaterialized(options)
-    KTopic(WindowedKeySerde(materialized.keySerde), materialized.valueSerde)
-  }
+      options: StoreOptions[K, V, _]): KTopic[Windowed[K], V] =
+    KTopic(WindowedKeySerde(options.keySerde), options.valSerde)
 
-  /** Returns the materialization options. */
-  @inline private[streams] def storeOptions[K, V](keySerde: KeySerde[K],
-                                                  valueSerde: ValueSerde[V]) =
-    Materialized.`with`[K, V, KeyValueStore[Bytes, Array[Byte]]](keySerde, valueSerde)
+  /** Returns a random name for the state store. */
+  @inline private[streams] def getStateStoreName: String =
+    "STATE-STORE-" + Random.alphanumeric.take(10).mkString
 }
